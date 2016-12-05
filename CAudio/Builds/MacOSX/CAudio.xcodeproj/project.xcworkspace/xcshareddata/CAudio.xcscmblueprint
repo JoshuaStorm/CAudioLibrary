@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "0421E13AD5CBE143BA1C2EEF9027740693D0F521",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "0421E13AD5CBE143BA1C2EEF9027740693D0F521" : 9223372036854775807,
+    "07177A1315D6B6885E5E179C4A41E132C866C38B" : 9223372036854775807
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "0412BCBF-93A3-4D7B-B3EC-BA22B36588A8",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "0421E13AD5CBE143BA1C2EEF9027740693D0F521" : "JUCE_projects\/",
+    "07177A1315D6B6885E5E179C4A41E132C866C38B" : "..\/Desktop\/stm32f4"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "CAudio",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "CAudio\/Builds\/MacOSX\/CAudio.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/Princeton-CDH\/bitKlavier.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "0421E13AD5CBE143BA1C2EEF9027740693D0F521"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/spiricom\/stm32f4.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "07177A1315D6B6885E5E179C4A41E132C866C38B"
+    }
+  ]
+}
