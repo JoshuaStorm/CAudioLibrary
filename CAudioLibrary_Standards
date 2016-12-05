@@ -1,0 +1,12 @@
+Our C Embedded Audio Library Standards
+
+1. Wavetable and Non-wavetable versions of all functions
+	- functionName_WTx: indicates the use of the wavetable version of functionName. x represents data resolution in number of bits (8,16,32,64)
+	- functionName_Ex: indicates the use of a non-wavetable version of functionName, with varying levels of efficiency, from x = 0 (lowest efficiency) to however many we make...
+
+	The goal is to allow the user to make their own tradeoffs between accuracy, efficiency, and code size, depending on their platform's limitations. 
+
+2. Audio processing happens on a per-sample basis in a tick function which receives the most recent input sample if it needs input
+
+3. 32-bit and 64-bit implementations 
+	
