@@ -6,7 +6,7 @@
   <MAINGROUP id="TqJics" name="CAudio">
     <GROUP id="{42482753-745C-4A53-F29E-D0735714B052}" name="Source">
       <GROUP id="{D0EE54B8-48FD-F6DF-6224-DAD02C41B4F2}" name="CAudio">
-        <FILE id="INHwhJ" name="Wavetables.c" compile="1" resource="0" file="../../../Desktop/stm32f4/drumbox_405_firstIC/Src/Wavetables.c"/>
+        <FILE id="BieEDy" name="Wavetables.c" compile="1" resource="0" file="Source/Wavetables.c"/>
         <FILE id="ZwF6st" name="Wavetables.h" compile="0" resource="0" file="Source/Wavetables.h"/>
         <FILE id="s89kih" name="CAudioUtilities.h" compile="0" resource="0"
               file="Source/CAudioUtilities.h"/>

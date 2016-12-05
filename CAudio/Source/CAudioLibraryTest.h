@@ -11,7 +11,7 @@
 #ifndef CAUDIOLIBRARYTEST_H_INCLUDED
 #define CAUDIOLIBRARYTEST_H_INCLUDED
 
-#include "Utilities.h"
+#include "CAudioUtilities.h"
 
 #include "CAudioLibrary.h"
 
@@ -29,7 +29,7 @@ float gResonance;
 #define NUM_OSC 10
 
 tTriangle osc[NUM_OSC];
-float oscGain[NUM_OSC] = {.4, .275, .1, .05, .05, .025, .025, .025, .025, .025};
+float oscGain[NUM_OSC] = {0.4, 0.275, .1, .05, .05, .025, .025, .025, .025, .025};
 
 tNoise      noise;
 
