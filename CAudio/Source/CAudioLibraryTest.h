@@ -80,6 +80,8 @@ void block(void)
     if (gDecay != val)
     {
         gDecay = val;
+        float temp =  2.0f + 2000.0f * gDecay;
+        DBG(String(temp));
         setEnvelopeDecay(env, 2.0f + 2000.0f * gDecay);
     }
     

@@ -53,7 +53,7 @@ typedef struct _tEnvelope {
     
     float gain;
     
-    uint32_t attackPhase, decayPhase;
+    float attackPhase, decayPhase;
     
     float(*tick)(struct _tEnvelope *self);
     int(*on)(struct _tEnvelope *self, float velocity);

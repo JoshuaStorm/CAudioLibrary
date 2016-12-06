@@ -9,4 +9,6 @@ Our C Embedded Audio Library Standards
 2. Audio processing happens on a per-sample basis in a tick function which receives the most recent input sample if it needs input
 
 3. 32-bit and 64-bit implementations 
+
+4. All functions and "classes" should be well-commented and well-documented. The expect unit of nput parameters to functions should be specified. Example code should show proper use and some fun and handy use cases. 
 	

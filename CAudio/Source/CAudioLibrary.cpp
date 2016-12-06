@@ -64,6 +64,8 @@ static int tEnvelopeDecay(tEnvelope *env, float decay) {
     
     env->decayInc = env->inc_buff[decayIndex];
     
+    DBG(env->inc_buff[decayIndex]);
+    
     return 0;
 }
 
@@ -97,39 +99,38 @@ static float tEnvelopeTick(tEnvelope *env) {
             out = env->gain * 1.0f;
         } else {
             // do interpolation !
-            out = env->gain * env->exp_buff[UINT16_MAX - env->attackPhase]; // inverted and backwards to get proper rising exponential shape/perception
+            out = env->gain * env->exp_buff[UINT16_MAX - (uint32_t)env->attackPhase]; // inverted and backwards to get proper rising exponential shape/perception
         }
         
-        uint32_t intPart = (uint32_t)env->attackInc;
-        float fracPart = env->attackInc - (float)intPart;
-        
         // Increment envelope attack.
-        env->attackPhase += intPart;
+        env->attackPhase += env->attackInc;
         
     }
     
     if (env->inDecay) {
     
         // If decay done, finish.
-        if (env->decayPhase >= UINT16_MAX) {
+        if (env->decayPhase >= UINT16_MAX)
+        {
             env->inDecay = 0;
+            
             if (env->loop) {
                 env->attackPhase = 0;
                 env->decayPhase = 0;
                 env->inAttack = 1;
             }
-            out = 0.0f;
+            else
+            {
+               out = 0.0f;
+            }
+            
         } else {
             
-            out = env->gain * (env->exp_buff[env->decayPhase]); // do interpolation !
+            out = env->gain * (env->exp_buff[(uint32_t)env->decayPhase]); // do interpolation !
         }
         
-        uint32_t intPart = (uint32_t)env->decayInc;
-        float fracPart = env->decayInc - (float)intPart;
-        
         // Increment envelope decay;
-        env->decayPhase += intPart;
-  
+        env->decayPhase += env->decayInc;
     }
     
     return out;
