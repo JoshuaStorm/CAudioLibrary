@@ -86,9 +86,19 @@ static int tEnvelopeOn(tEnvelope *env, float velocity) {
 
 static float tEnvelopeTick(tEnvelope *env) {
     
-    float out;
+    float out = 0.0f;
     
     if (env->inAttack) {
+    
+        // If attack done, time to turn around.
+        if (env->attackPhase > UINT16_MAX) {
+            env->inDecay = 1;
+            env->inAttack = 0;
+            out = env->gain * 1.0f;
+        } else {
+            // do interpolation !
+            out = env->gain * env->exp_buff[UINT16_MAX - env->attackPhase]; // inverted and backwards to get proper rising exponential shape/perception
+        }
         
         uint32_t intPart = (uint32_t)env->attackInc;
         float fracPart = env->attackInc - (float)intPart;
@@ -96,25 +106,10 @@ static float tEnvelopeTick(tEnvelope *env) {
         // Increment envelope attack.
         env->attackPhase += intPart;
         
-        
-        // If attack done, time to turn around.
-        if (env->attackPhase > UINT16_MAX) {
-            env->inDecay = 1;
-            env->inAttack = 0;
-            return env->gain * 1.0f;
-        } else {
-            // do interpolation !
-            return env->gain * (1.0f - env->exp_buff[UINT16_MAX - env->attackPhase]); // inverted and backwards to get proper rising exponential shape/perception
-        }
-        
-    } else if (env->inDecay) {
-        
-        uint32_t intPart = (uint32_t)env->decayInc;
-        float fracPart = env->decayInc - (float)intPart;
-        
-        // Increment envelope decay;
-        env->decayPhase += intPart;
-        
+    }
+    
+    if (env->inDecay) {
+    
         // If decay done, finish.
         if (env->decayPhase >= UINT16_MAX) {
             env->inDecay = 0;
@@ -123,16 +118,21 @@ static float tEnvelopeTick(tEnvelope *env) {
                 env->decayPhase = 0;
                 env->inAttack = 1;
             }
-            return 0.0f;
+            out = 0.0f;
         } else {
             
-            return env->gain * (env->exp_buff[env->decayPhase]); // do interpolation !
+            out = env->gain * (env->exp_buff[env->decayPhase]); // do interpolation !
         }
-    } else {
         
-        return 0.0f;
+        uint32_t intPart = (uint32_t)env->decayInc;
+        float fracPart = env->decayInc - (float)intPart;
+        
+        // Increment envelope decay;
+        env->decayPhase += intPart;
+  
     }
     
+    return out;
 }
 
 // exponentialTable must be of size 65536

@@ -17,20 +17,53 @@
 
 static const std::vector<std::string> cSliderNames =
 {
-    "SVF Resonance",
+    "Frequency",
+    "Noise",
     "SVF Cutoff",
-    "Noise Level",
-    "Fundamental",
+    "SVF Resonance",
+    "Attack",
+    "Decay",
     "Gain"
 };
 
+
+
+static const std::vector<std::string> cButtonNames =
+{
+    "Tap"
+};
+
 std::vector<float> cSliderValues(cSliderNames.size());
+
+std::vector<bool> cButtonStates(cButtonNames.size());
 
 void printSliderValues(void)
 {
     for (int i = 0; i < cSliderNames.size(); i++)
     {
         DBG(cSliderNames[i] + ": " + String(cSliderValues[i]));
+    }
+}
+
+bool getButtonState(String name)
+{
+    for (int i = 0; i < cButtonNames.size(); i++)
+    {
+        if (name == cButtonNames[i])
+        {
+            return cButtonStates[i];
+        }
+    }
+}
+
+void setButtonState(String name, bool on)
+{
+    for (int i = 0; i < cButtonNames.size(); i++)
+    {
+        if (name == cButtonNames[i])
+        {
+            cButtonStates[i] = on;
+        }
     }
 }
 
@@ -70,7 +103,7 @@ float randomNumberGenerator(void)
 static const int cLeftOffset = 30;
 static const int cTopOffset = 30;
 
-static const int cXSpacing = 80;
+static const int cXSpacing = 60;
 static const int cYSpacing = 5;
 
 static const int cSliderHeight = 200;
@@ -78,6 +111,9 @@ static const int cSliderWidth = 20;
 
 static const int cLabelHeight = 20;
 static const int cLabelWidth  = cSliderWidth + cXSpacing;
+
+static const int cButtonHeight = 30;
+static const int cButtonWidth  = 60;
 
 
 

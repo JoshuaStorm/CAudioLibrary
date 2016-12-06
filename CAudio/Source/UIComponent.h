@@ -19,7 +19,7 @@
 //==============================================================================
 /*
 */
-class UIComponent    : public Component, public Slider::Listener
+class UIComponent    : public Component, public Slider::Listener, public TextButton::Listener
 {
 public:
     UIComponent()
@@ -36,13 +36,21 @@ public:
             sliders[i]->addListener(this);
             addAndMakeVisible(sliders[i]);
             
-            labels.set(i,   new Label());
-            labels[i]->setName(cSliderNames[i]);
-            labels[i]->setColour(Label::textColourId, Colours::aliceblue);
-            labels[i]->setText(cSliderNames[i], NotificationType::dontSendNotification);
-            addAndMakeVisible(labels[i]);
+            sliderLabels.set(i,   new Label());
+            sliderLabels[i]->setName(cSliderNames[i]);
+            sliderLabels[i]->setColour(Label::textColourId, Colours::aliceblue);
+            sliderLabels[i]->setText(cSliderNames[i], NotificationType::dontSendNotification);
+            addAndMakeVisible(sliderLabels[i]);
         }
         
+        for (int i = 0; i < cButtonNames.size(); i++)
+        {
+            buttons.set(i, new TextButton(cButtonNames[i]));
+            buttons[i]->changeWidthToFitText();
+            buttons[i]->setButtonText(cButtonNames[i]);
+            buttons[i]->addListener(this);
+            addAndMakeVisible(buttons[i]);
+        }
 
     }
 
@@ -69,27 +77,44 @@ public:
     {
         for (int i = 0; i < cSliderNames.size(); i++)
         {
-            sliders[i]  ->setBounds(cLeftOffset + ((cSliderWidth + cXSpacing)*i),
-                                    cTopOffset,
-                                    cSliderWidth,
-                                    cSliderHeight);
+            sliders[i]      ->setBounds(
+                                        cLeftOffset + ((cSliderWidth + cXSpacing) * i),
+                                        cTopOffset,
+                                        cSliderWidth,
+                                        cSliderHeight);
             
-            labels[i]   ->setBounds(cLeftOffset + ((cSliderWidth + cXSpacing)*i) - (cSliderNames[i].length() * 2.0f),
-                                    cTopOffset + cSliderHeight + cYSpacing,
-                                    cLabelWidth,
-                                    cLabelHeight);
+            sliderLabels[i] ->setBounds(
+                                        cLeftOffset + ((cSliderWidth + cXSpacing) * i) - (cSliderNames[i].length() * 2.0f),
+                                        cTopOffset + cSliderHeight + cYSpacing,
+                                        cLabelWidth,
+                                        cLabelHeight);
+        }
+        
+        for (int i = 0; i < cButtonNames.size(); i++)
+        {
+            buttons[i]      ->setBounds(
+                                        cLeftOffset + ((cButtonWidth + cXSpacing) * i),
+                                        cTopOffset + cSliderHeight + cLabelHeight + 2 * cYSpacing,
+                                        cButtonWidth,
+                                        cButtonHeight);
         }
     }
     
-    void sliderValueChanged(Slider *s) override
+    void sliderValueChanged(Slider* s) override
     {
         setSliderValue(s->getName(), s->getValue());
     }
     
+    void buttonClicked (Button* b) override
+    {
+        setButtonState(b->getName(), true);
+    }
 
 private:
     OwnedArray<Slider> sliders;
-    OwnedArray<Label>  labels;
+    OwnedArray<Label>  sliderLabels;
+    
+    OwnedArray<TextButton> buttons;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (UIComponent)
 };
