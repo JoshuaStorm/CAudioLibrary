@@ -78,28 +78,59 @@ static int tEnvelopeLoop(tEnvelope *env, int loop) {
 
 
 static int tEnvelopeOn(tEnvelope *env, float velocity) {
+    
+    if (env->inAttack || env->inDecay) // In case envelope retriggered while it is still happening.
+    {
+        env->rampPhase = 0;
+        env->inRamp = 1;
+        env->rampPeak = env->next;
+    }
+    else // Normal start.
+    {
+        env->inAttack = 1;
+    }
+    
+    
     env->attackPhase = 0;
     env->decayPhase = 0;
-    env->inAttack = 1;
     env->inDecay = 0;
     env->gain = velocity;
+    
     return 0;
 }
 
 static float tEnvelopeTick(tEnvelope *env) {
     
-    float out = 0.0f;
-    
-    if (env->inAttack) {
+    if (env->inRamp)
+    {
+        if (env->rampPhase > UINT16_MAX)
+        {
+            env->inRamp = 0;
+            env->inAttack = 1;
+            env->next = 0.0f;
+        }
+        else
+        {
+            env->next = env->rampPeak * env->exp_buff[(uint32_t)env->rampPhase];
+        }
+        
+        env->rampPhase += env->rampInc;
+    }
+
+    if (env->inAttack)
+    {
     
         // If attack done, time to turn around.
-        if (env->attackPhase > UINT16_MAX) {
+        if (env->attackPhase > UINT16_MAX)
+        {
             env->inDecay = 1;
             env->inAttack = 0;
-            out = env->gain * 1.0f;
-        } else {
+            env->next = env->gain * 1.0f;
+        }
+        else
+        {
             // do interpolation !
-            out = env->gain * env->exp_buff[UINT16_MAX - (uint32_t)env->attackPhase]; // inverted and backwards to get proper rising exponential shape/perception
+            env->next = env->gain * env->exp_buff[UINT16_MAX - (uint32_t)env->attackPhase]; // inverted and backwards to get proper rising exponential shape/perception
         }
         
         // Increment envelope attack.
@@ -107,33 +138,35 @@ static float tEnvelopeTick(tEnvelope *env) {
         
     }
     
-    if (env->inDecay) {
+    if (env->inDecay)
+    {
     
         // If decay done, finish.
         if (env->decayPhase >= UINT16_MAX)
         {
             env->inDecay = 0;
             
-            if (env->loop) {
+            if (env->loop)
+            {
                 env->attackPhase = 0;
                 env->decayPhase = 0;
                 env->inAttack = 1;
             }
             else
             {
-               out = 0.0f;
+               env->next = 0.0f;
             }
             
         } else {
             
-            out = env->gain * (env->exp_buff[(uint32_t)env->decayPhase]); // do interpolation !
+            env->next = env->gain * (env->exp_buff[(uint32_t)env->decayPhase]); // do interpolation !
         }
         
         // Increment envelope decay;
         env->decayPhase += env->decayInc;
     }
-    
-    return out;
+
+    return env->next;
 }
 
 // exponentialTable must be of size 65536
@@ -159,12 +192,22 @@ int tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
     
     uint16_t attackIndex = ((uint16_t)(attack * 8.0f))-1;
     uint16_t decayIndex = ((uint16_t)(decay * 8.0f))-1;
-    if (attack < 0)
+    uint16_t rampIndex = ((uint16_t)(2.0f * 8.0f))-1;
+    
+    if (attackIndex < 0)
         attackIndex = 0;
     if (decayIndex < 0)
         decayIndex = 0;
+    if (rampIndex < 0)
+        rampIndex = 0;
+    
+    env->inRamp = 0;
+    env->inAttack = 0;
+    env->inDecay = 0;
+    
     env->attackInc = env->inc_buff[attackIndex];
     env->decayInc = env->inc_buff[decayIndex];
+    env->rampInc = env->inc_buff[rampIndex];
     
     env->on = &tEnvelopeOn;
     env->setLoop = &tEnvelopeLoop;

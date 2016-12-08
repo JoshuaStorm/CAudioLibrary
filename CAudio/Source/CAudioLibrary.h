@@ -45,15 +45,17 @@ typedef struct _tEnvelope {
     const float *inc_buff;
     uint32_t buff_size;
     
-    float attackInc, decayInc;
+    float next;
     
-    int inAttack, inDecay;
+    float attackInc, decayInc, rampInc;
+    
+    int inAttack, inDecay, inRamp;
     
     int loop;
     
-    float gain;
+    float gain, rampPeak;
     
-    float attackPhase, decayPhase;
+    float attackPhase, decayPhase, rampPhase;
     
     float(*tick)(struct _tEnvelope *self);
     int(*on)(struct _tEnvelope *self, float velocity);
@@ -62,7 +64,7 @@ typedef struct _tEnvelope {
     int(*setLoop)(struct _tEnvelope *self, int loop);
 } tEnvelope;
 
-int tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop, const float *exponentialTable, const float *attackDecayIncTable);
+int tEnvelopeInit(tEnvelope *env,float sr, float attack, float decay, int loop, const float *exponentialTable, const float *attackDecayIncTable);
 
 typedef struct _tADSR {
     
