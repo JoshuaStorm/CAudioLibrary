@@ -13,16 +13,23 @@
           <FILE id="mZzdFs" name="CAudioLibrary.cpp" compile="1" resource="0"
                 file="Source/CAudioLibrary.cpp"/>
         </GROUP>
-        <FILE id="s89kih" name="CAudioUtilities.h" compile="0" resource="0"
-              file="Source/CAudioUtilities.h"/>
-        <FILE id="VHxLL1" name="CAudioLibraryTest.h" compile="0" resource="0"
-              file="Source/CAudioLibraryTest.h"/>
+        <GROUP id="{74B8D251-850E-42A7-CAE2-BF602CAB0D63}" name="Test">
+          <FILE id="s89kih" name="CAudioUtilities.h" compile="0" resource="0"
+                file="Source/CAudioUtilities.h"/>
+          <FILE id="VHxLL1" name="CAudioLibraryTest.h" compile="0" resource="0"
+                file="Source/CAudioLibraryTest.h"/>
+        </GROUP>
       </GROUP>
-      <FILE id="baX6oG" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
-      <FILE id="GWM7wg" name="UIComponent.h" compile="0" resource="0" file="Source/UIComponent.h"/>
-      <FILE id="f0YxrQ" name="MainComponent.cpp" compile="1" resource="0"
-            file="Source/MainComponent.cpp"/>
-      <FILE id="lppG9u" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <GROUP id="{DB3BB674-1FA2-80C0-87AD-DD8B93DB2162}" name="UI">
+        <FILE id="N5gNtu" name="Layout.h" compile="0" resource="0" file="Source/Layout.h"/>
+        <FILE id="GWM7wg" name="UIComponent.h" compile="0" resource="0" file="Source/UIComponent.h"/>
+      </GROUP>
+      <GROUP id="{7AE7D992-B1A8-598B-5A6D-AF339905E15D}" name="Wrapper">
+        <FILE id="baX6oG" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+        <FILE id="f0YxrQ" name="MainComponent.cpp" compile="1" resource="0"
+              file="Source/MainComponent.cpp"/>
+        <FILE id="lppG9u" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      </GROUP>
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>
