@@ -31,7 +31,7 @@ float dbuf1[DELAY_BUFFER_LENGTH_2];
 float dbuf2[DELAY_BUFFER_LENGTH_2];
 float dbuf3[DELAY_BUFFER_LENGTH_2];
 
-float clipAU(float min, float val, float max) {
+float   clipAU(float min, float val, float max) {
     
     if (val < min) {
         return min;
@@ -42,7 +42,7 @@ float clipAU(float min, float val, float max) {
     }
 }
 
-int isPrimeAU(uint64 number )
+int     isPrimeAU(uint64 number )
 {
     if ( number == 2 ) return true;
     if ( number & 1 ) {
@@ -54,7 +54,7 @@ int isPrimeAU(uint64 number )
 }
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ PRCRev ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
 
-void tPRCRevSetT60(tPRCRev *r, float t60)
+void    tPRCRevSetT60(tPRCRev *r, float t60)
 {
     if ( t60 <= 0.0 ) t60 = 0.001f;
     
@@ -62,12 +62,12 @@ void tPRCRevSetT60(tPRCRev *r, float t60)
 
 }
 
-void tPRCRevSetMix(tPRCRev *r, float mix)
+void    tPRCRevSetMix(tPRCRev *r, float mix)
 {
     r->mix = mix;
 }
 
-float tPRCRevTick(tPRCRev *r, float input)
+float   tPRCRevTick(tPRCRev *r, float input)
 {
     float temp, temp0, temp1, temp2;
     float out;
@@ -100,7 +100,7 @@ float tPRCRevTick(tPRCRev *r, float input)
 }
 
 
-int tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][DELAY_BUFFER_LENGTH_2])
+int     tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][DELAY_BUFFER_LENGTH_2])
 {
     if (t60 <= 0.0) t60 = 0.001f;
     
@@ -141,7 +141,7 @@ int tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][DELAY_BUF
     return 1;
 }
 
-void tNRevSetT60(tNRev *r, float t60)
+void    tNRevSetT60(tNRev *r, float t60)
 {
     if (t60 <= 0.0)           t60 = 0.001f;
     
@@ -149,12 +149,12 @@ void tNRevSetT60(tNRev *r, float t60)
     
 }
 
-void tNRevSetMix(tNRev *r, float mix)
+void    tNRevSetMix(tNRev *r, float mix)
 {
     r->mix = mix;
 }
 
-float tNRevTick(tNRev *r, float input)
+float   tNRevTick(tNRev *r, float input)
 {
     r->lastIn = input;
     
@@ -209,7 +209,7 @@ float tNRevTick(tNRev *r, float input)
 }
 
 
-int tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][DELAY_BUFFER_LENGTH_2])
+int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][DELAY_BUFFER_LENGTH_2])
 {
     if (t60 <= 0.0) t60 = 0.001f;
     
@@ -257,8 +257,9 @@ int tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][DELAY_BUFFER
     return 0;
 }
 
+#pragma mark - Filters
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OneZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int      tOneZeroInit(tOneZero *f, float theZero)
+int     tOneZeroInit(tOneZero *f, float theZero)
 {
     f->gain = 1.0f;
     f->lastIn = 0.0f;
@@ -268,7 +269,7 @@ int      tOneZeroInit(tOneZero *f, float theZero)
     return 0;
 }
 
-float    tOneZeroTick(tOneZero *f, float input)
+float   tOneZeroTick(tOneZero *f, float input)
 {
     float in = input * f->gain;
     float out = f->b1 * f->lastIn + f->b0 * in;
@@ -278,7 +279,7 @@ float    tOneZeroTick(tOneZero *f, float input)
     return out;
 }
 
-void     tOneZeroSetZero(tOneZero *f, float theZero)
+void    tOneZeroSetZero(tOneZero *f, float theZero)
 {
     if (theZero > 0.0f) f->b0 = 1.0f / (1.0f + theZero);
     else                f->b0 = 1.0f / (1.0f - theZero);
@@ -287,28 +288,29 @@ void     tOneZeroSetZero(tOneZero *f, float theZero)
     
 }
 
-void     tOneZeroSetB0(tOneZero *f, float b0)
+void    tOneZeroSetB0(tOneZero *f, float b0)
 {
     f->b0 = b0;
 }
 
-void     tOneZeroSetB1(tOneZero *f, float b1)
+void    tOneZeroSetB1(tOneZero *f, float b1)
 {
     f->b1 = b1;
 }
 
-void     tOneZeroSetCoefficients(tOneZero *f, float b0, float b1)
+void    tOneZeroSetCoefficients(tOneZero *f, float b0, float b1)
 {
     f->b0 = b0;
     f->b1 = b1;
 }
 
-void     tOneZeroSetGain(tOneZero *f, float gain)
+void    tOneZeroSetGain(tOneZero *f, float gain)
 {
     f->gain = gain;
 }
+
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OneZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int      tTwoZeroInit(tTwoZero *f, float sr)
+int     tTwoZeroInit(tTwoZero *f, float sr)
 {
     f->gain = 1.0f;
     f->lastIn[0] = 0.0f;
@@ -319,7 +321,7 @@ int      tTwoZeroInit(tTwoZero *f, float sr)
     return 0;
 }
 
-float    tTwoZeroTick(tTwoZero *f, float input)
+float   tTwoZeroTick(tTwoZero *f, float input)
 {
     float in = input * f->gain;
     float out = f->b2 * f->lastIn[1] + f->b1 * f->lastIn[0] + f->b0 * in;
@@ -330,7 +332,7 @@ float    tTwoZeroTick(tTwoZero *f, float input)
     return out;
 }
 
-void     tTwoZeroSetNotch(tTwoZero *f, float freq, float radius)
+void    tTwoZeroSetNotch(tTwoZero *f, float freq, float radius)
 {
     // Should also deal with frequency being > half sample rate / nyquist. See STK
     if (freq < 0.0f)    freq = 0.0f;
@@ -346,29 +348,27 @@ void     tTwoZeroSetNotch(tTwoZero *f, float freq, float radius)
         f->b0 = 1.0f / ( 1.0f - f->b1 + f->b2 );
     f->b1 *= f->b0;
     f->b2 *= f->b0;
-    
-    DBG("B0 B1 B2: " + String(f->b0) + " " + String(f->b1) + " " + String(f->b2));
-    
+
 }
 
-void     tTwoZeroSetB0(tTwoZero *f, float b0)
+void    tTwoZeroSetB0(tTwoZero *f, float b0)
 {
     f->b0 = b0;
 }
 
-void     tTwoZeroSetB1(tTwoZero *f, float b1)
+void    tTwoZeroSetB1(tTwoZero *f, float b1)
 {
     f->b1 = b1;
 }
 
-void     tTwoZeroSetCoefficients(tTwoZero *f, float b0, float b1, float b2)
+void    tTwoZeroSetCoefficients(tTwoZero *f, float b0, float b1, float b2)
 {
     f->b0 = b0;
     f->b1 = b1;
     f->b2 = b2;
 }
 
-void     tTwoZeroSetGain(tTwoZero *f, float gain)
+void    tTwoZeroSetGain(tTwoZero *f, float gain)
 {
     f->gain = gain;
 }
@@ -376,19 +376,19 @@ void     tTwoZeroSetGain(tTwoZero *f, float gain)
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OnePole Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
 
-void tOnePoleSetB0(tOnePole *f, float b0)
+void    tOnePoleSetB0(tOnePole *f, float b0)
 {
     f->b0 = b0;
 }
 
-void tOnePoleSetA1(tOnePole *f, float a1)
+void    tOnePoleSetA1(tOnePole *f, float a1)
 {
     if (a1 >= 1.0f)     a1 = 0.999999f;
     
     f->a1 = a1;
 }
 
-void tOnePoleSetPole(tOnePole *f, float thePole)
+void    tOnePoleSetPole(tOnePole *f, float thePole)
 {
     if (thePole >= 1.0f)    thePole = 0.999999f;
     
@@ -399,7 +399,7 @@ void tOnePoleSetPole(tOnePole *f, float thePole)
     f->a1 = -thePole;
 }
 
-void tOnePoleSetCoefficients(tOnePole *f, float b0, float a1)
+void    tOnePoleSetCoefficients(tOnePole *f, float b0, float a1)
 {
     if (a1 >= 1.0f)     a1 = 0.999999f;
     
@@ -407,12 +407,12 @@ void tOnePoleSetCoefficients(tOnePole *f, float b0, float a1)
     f->a1 = a1;
 }
 
-void tOnePoleSetGain(tOnePole *f, float gain)
+void    tOnePoleSetGain(tOnePole *f, float gain)
 {
     f->gain = gain;
 }
 
-float tOnePoleTick(tOnePole *f, float input)
+float   tOnePoleTick(tOnePole *f, float input)
 {
     float in = input * f->gain;
     float out = (f->b0 * in) - (f->a1 * f->lastOut);
@@ -423,7 +423,7 @@ float tOnePoleTick(tOnePole *f, float input)
     return out;
 }
 
-int tOnePoleInit(tOnePole *f, float thePole)
+int     tOnePoleInit(tOnePole *f, float thePole)
 {
     f->gain = 1.0f;
     f->a0 = 1.0;
@@ -434,22 +434,97 @@ int tOnePoleInit(tOnePole *f, float thePole)
     f->lastOut = 0.0f;
     
     
+    return 0;
+}
+
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ TwoPole Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+int     tTwoPoleInit(tTwoPole *f, float sr)
+{
+    f->gain = 1.0f;
+    f->a0 = 1.0;
+    f->b0 = 1.0;
+    
+    f->sr = sr;
+    f->inv_sr = 1.0f / sr;
+    
+    f->lastOut[0] = 0.0f;
+    f->lastOut[1] = 0.0f;
+    
     return 1;
+}
+
+float   tTwoPoleTick(tTwoPole *f, float input)
+{
+    float in = input * f->gain;
+    float out = (f->b0 * in) - (f->a1 * f->lastOut[0]) - (f->a2 * f->lastOut[1]);
+    
+    f->lastOut[1] = f->lastOut[0];
+    f->lastOut[0] = out;
+    
+    return out;
+}
+
+void    tTwoPoleSetB0(tTwoPole *f, float b0)
+{
+    f->b0 = b0;
+}
+
+void    tTwoPoleSetA1(tTwoPole *f, float a1)
+{
+    f->a1 = a1;
+}
+
+void    tTwoPoleSetA2(tTwoPole *f, float a2)
+{
+    f->a2 = a2;
+}
+
+
+void    tTwoPoleSetResonance(tTwoPole *f, float frequency, float radius, int normalize)
+{
+    if (frequency < 0.0f)   frequency = 0.0f; // need to also handle when frequency > nyquist
+    if (radius < 0.0f)      radius = 0.0f;
+    if (radius >= 1.0f)     radius = 0.999999f;
+    
+    f->a2 = radius * radius;
+    f->a1 =  -2.0f * radius * cos(TWO_PI * frequency * f->inv_sr);
+    
+    if ( normalize )
+    {
+        // Normalize the filter gain ... not terribly efficient.
+        float real = 1 - radius + (f->a2 - radius) * cos(TWO_PI * 2 * frequency * f->inv_sr);
+        float imag = (f->a2 - radius) * sin(TWO_PI * 2 * frequency * f->inv_sr);
+        f->b0 = sqrt( pow(real, 2) + pow(imag, 2) );
+        
+        // NEED TO OPTIMIZE and make sure sqrt/pow/cos are compatible. How do we want to handle this for platforms that it won't be compatible on?
+    }
+}
+
+void    tTwoPoleSetCoefficients(tTwoPole *f, float b0, float a1, float a2)
+{
+    f->b0 = b0;
+    f->a1 = a1;
+    f->a2 = a2;
+}
+
+void    tTwoPoleSetGain(tTwoPole *f, float gain)
+{
+    f->gain = gain;
 }
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ PoleZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
 
-void tPoleZeroSetB0(tPoleZero *pzf, float b0)
+void    tPoleZeroSetB0(tPoleZero *pzf, float b0)
 {
     pzf->b0 = b0;
 }
 
-void tPoleZeroSetB1(tPoleZero *pzf, float b1)
+void    tPoleZeroSetB1(tPoleZero *pzf, float b1)
 {
     pzf->b1 = b1;
 }
 
-void tPoleZeroSetA1(tPoleZero *pzf, float a1)
+void    tPoleZeroSetA1(tPoleZero *pzf, float a1)
 {
     if (a1 >= 1.0f) // a1 should be less than 1.0
     {
@@ -459,7 +534,7 @@ void tPoleZeroSetA1(tPoleZero *pzf, float a1)
     pzf->a1 = a1;
 }
 
-void tPoleZeroSetCoefficients(tPoleZero *pzf, float b0, float b1, float a1)
+void    tPoleZeroSetCoefficients(tPoleZero *pzf, float b0, float b1, float a1)
 {
     if (a1 >= 1.0f) // a1 should be less than 1.0
     {
@@ -471,7 +546,7 @@ void tPoleZeroSetCoefficients(tPoleZero *pzf, float b0, float b1, float a1)
     pzf->a1 = a1;
 }
 
-void tPoleZeroSetAllpass(tPoleZero *pzf, float coeff)
+void    tPoleZeroSetAllpass(tPoleZero *pzf, float coeff)
 {
     if (coeff >= 1.0f) // allpass coefficient >= 1.0 makes filter unstable
     {
@@ -484,7 +559,7 @@ void tPoleZeroSetAllpass(tPoleZero *pzf, float coeff)
     pzf->a1 = coeff;
 }
 
-void tPoleZeroSetBlockZero(tPoleZero *pzf, float thePole)
+void    tPoleZeroSetBlockZero(tPoleZero *pzf, float thePole)
 {
     if (thePole >= 1.0f) // allpass coefficient >= 1.0 makes filter unstable
     {
@@ -497,12 +572,12 @@ void tPoleZeroSetBlockZero(tPoleZero *pzf, float thePole)
     pzf->a1 = -thePole;
 }
 
-void tPoleZeroSetGain(tPoleZero *pzf, float gain)
+void    tPoleZeroSetGain(tPoleZero *pzf, float gain)
 {
     pzf->gain = gain;
 }
 
-float tPoleZeroTick(tPoleZero *pzf, float input)
+float   tPoleZeroTick(tPoleZero *pzf, float input)
 {
     float in = input * pzf->gain;
     float out = (pzf->b0 * in) + (pzf->b1 * pzf->lastIn) - (pzf->a1 * pzf->lastOut);
@@ -513,7 +588,7 @@ float tPoleZeroTick(tPoleZero *pzf, float input)
     return out;
 }
 
-int tPoleZeroInit(tPoleZero *pzf)
+int     tPoleZeroInit(tPoleZero *pzf)
 {
     pzf->gain = 1.0f;
     pzf->b0 = 1.0;
@@ -525,8 +600,118 @@ int tPoleZeroInit(tPoleZero *pzf)
     return 1;
 }
 
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ BiQuad Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+int     tBiQuadInit(tBiQuad *f, float sr)
+{
+    f->gain = 1.0f;
+
+    f->sr = sr;
+    f->inv_sr = 1.0f/sr;
+    
+    f->b0 = 0.0f;
+    f->a0 = 0.0f;
+    
+    f->lastIn[0] = 0.0f;
+    f->lastIn[1] = 0.0f;
+    f->lastOut[0] = 0.0f;
+    f->lastOut[1] = 0.0f;
+    
+    return 0;
+}
+
+float   tBiQuadTick(tBiQuad *f, float input)
+{
+    float in = input * f->gain;
+    float out = f->b0 * in + f->b1 * f->lastIn[0] + f->b2 * f->lastIn[1];
+    out -= f->a2 * f->lastOut[1] + f->a1 * f->lastOut[0];
+    
+    f->lastIn[1] = f->lastIn[0];
+    f->lastIn[0] = in;
+    
+    f->lastOut[1] = f->lastOut[0];
+    f->lastOut[0] = out;
+    
+    return out;
+}
+
+void    tBiQuadSetResonance(tBiQuad *f, float freq, float radius, int normalize)
+{
+    // Should also deal with frequency being > half sample rate / nyquist. See STK
+    if (freq < 0.0f)    freq = 0.0f;
+    if (radius < 0.0f)  radius = 0.0f;
+    if (radius >= 1.0f)  radius = 1.0f;
+    
+    f->a2 = radius * radius;
+    f->a1 = -2.0f * radius * cosf(TWO_PI * freq * f->inv_sr);
+    
+    if (normalize)
+    {
+        f->b0 = 0.5f - 0.5f * f->a2;
+        f->b1 = 0.0f;
+        f->b2 = -f->b0;
+    }
+}
+
+void    tBiQuadSetNotch(tBiQuad *f, float freq, float radius)
+{
+    // Should also deal with frequency being > half sample rate / nyquist. See STK
+    if (freq < 0.0f)    freq = 0.0f;
+    if (radius < 0.0f)  radius = 0.0f;
+    
+    f->b2 = radius * radius;
+    f->b1 = -2.0f * radius * cosf(TWO_PI * freq * f->inv_sr); // OPTIMIZE with LOOKUP or APPROXIMATION
+    
+    // Does not attempt to normalize filter gain.
+}
+
+void tBiQuadSetEqualGainZeros(tBiQuad *f)
+{
+    f->b0 = 1.0f;
+    f->b1 = 0.0f;
+    f->b2 = -1.0f;
+}
+
+void    tBiQuadSetB0(tBiQuad *f, float b0)
+{
+    f->b0 = b0;
+}
+
+void    tBiQuadSetB1(tBiQuad *f, float b1)
+{
+    f->b1 = b1;
+}
+
+void    tBiQuadSetB2(tBiQuad *f, float b2)
+{
+    f->b2 = b2;
+}
+
+void    tBiQuadSetA1(tBiQuad *f, float a1)
+{
+    f->a1 = a1;
+}
+
+void    tBiQuadSetA2(tBiQuad *f, float a2)
+{
+    f->a2 = a2;
+}
+
+void    tBiQuadSetCoefficients(tBiQuad *f, float b0, float b1, float b2, float a1, float a2)
+{
+    f->b0 = b0;
+    f->b1 = b1;
+    f->b2 = b2;
+    f->a1 = a1;
+    f->a2 = a2;
+}
+
+void    tBiQuadSetGain(tBiQuad *f, float gain)
+{
+    f->gain = gain;
+}
+
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ Delay ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int tDelaySetDelay(tDelay *d, float delay)
+int     tDelaySetDelay(tDelay *d, float delay)
 {
     float outPointer;
     
@@ -545,22 +730,22 @@ int tDelaySetDelay(tDelay *d, float delay)
     return 0;
 }
 
-float tDelayGetDelay(tDelay *d)
+float   tDelayGetDelay(tDelay *d)
 {
     return d->delay;
 }
 
-float tDelayGetLastOut(tDelay *d)
+float   tDelayGetLastOut(tDelay *d)
 {
     return d->lastOut;
 }
 
-float tDelayGetLastIn(tDelay *d)
+float   tDelayGetLastIn(tDelay *d)
 {
     return d->lastIn;
 }
 
-float tDelayTick(tDelay *d, float sample)
+float   tDelayTick(tDelay *d, float sample)
 {
     float output_sample;
     d->buff[(d->in_index)] = sample;
@@ -586,7 +771,7 @@ float tDelayTick(tDelay *d, float sample)
 
 
 /* Delay */
-int tDelayInit(tDelay *d, float *buff)
+int     tDelayInit(tDelay *d, float *buff)
 {
     d->buff = buff;
     d->bottomFrac = 0.0f;
@@ -601,7 +786,7 @@ int tDelayInit(tDelay *d, float *buff)
 }
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ Envelope ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int tEnvelopeAttack(tEnvelope *env, float attack)
+int     tEnvelopeAttack(tEnvelope *env, float attack)
 {
     uint16_t attackIndex;
     
@@ -618,7 +803,7 @@ int tEnvelopeAttack(tEnvelope *env, float attack)
     return 0;
 }
 
-int tEnvelopeDecay(tEnvelope *env, float decay)
+int     tEnvelopeDecay(tEnvelope *env, float decay)
 {
     uint16_t decayIndex;
     
@@ -631,13 +816,12 @@ int tEnvelopeDecay(tEnvelope *env, float decay)
     }
     
     env->decayInc = env->inc_buff[decayIndex];
-    
-    DBG(env->inc_buff[decayIndex]);
+
     
     return 0;
 }
 
-int tEnvelopeLoop(tEnvelope *env, int loop)
+int     tEnvelopeLoop(tEnvelope *env, int loop)
 {
     env->loop = loop;
     
@@ -645,7 +829,7 @@ int tEnvelopeLoop(tEnvelope *env, int loop)
 }
 
 
-int tEnvelopeOn(tEnvelope *env, float velocity)
+int     tEnvelopeOn(tEnvelope *env, float velocity)
 {
     if (env->inAttack || env->inDecay) // In case envelope retriggered while it is still happening.
     {
@@ -667,7 +851,7 @@ int tEnvelopeOn(tEnvelope *env, float velocity)
     return 0;
 }
 
-float tEnvelopeTick(tEnvelope *env)
+float   tEnvelopeTick(tEnvelope *env)
 {
     if (env->inRamp)
     {
@@ -737,8 +921,8 @@ float tEnvelopeTick(tEnvelope *env)
     return env->next;
 }
 
-int tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
-                  const float *exponentialTable, const float *attackDecayIncTable)
+int     tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
+                      const float *exponentialTable, const float *attackDecayIncTable)
 {
     env->inv_sr = 1.0f/sr;
     env->exp_buff = exponentialTable;
@@ -780,14 +964,14 @@ int tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
 }
 
 /* Phasor */
-int tPhasorFreq(tPhasor *p, float freq)
+int     tPhasorFreq(tPhasor *p, float freq)
 {
     p->inc = freq * p->inv_sr;
     
     return 0;
 }
 
-float tPhasorTick(tPhasor *p)
+float   tPhasorTick(tPhasor *p)
 {
     p->phase += p->inc;
     
@@ -796,7 +980,7 @@ float tPhasorTick(tPhasor *p)
     return p->phase;
 }
 
-int tPhasorInit(tPhasor *p, float sr)
+int     tPhasorInit(tPhasor *p, float sr)
 {
     p->phase = 0.0f;
     p->inc = 0.0f;
@@ -805,7 +989,7 @@ int tPhasorInit(tPhasor *p, float sr)
     return 0;
 }
 
-float tSVFTick(tSVF *svf, float v0)
+float   tSVFTick(tSVF *svf, float v0)
 {
     float v1,v2,v3;
     float low,high;
@@ -824,7 +1008,7 @@ float tSVFTick(tSVF *svf, float v0)
     
 }
 
-int tSVFSetFreq(tSVF *svf, uint16_t cutoffKnob)
+int     tSVFSetFreq(tSVF *svf, uint16_t cutoffKnob)
 {
     svf->g = filtertan[cutoffKnob];
     svf->a1 = 1.0f/(1.0f + svf->g * (svf->g + svf->k));
@@ -834,7 +1018,7 @@ int tSVFSetFreq(tSVF *svf, uint16_t cutoffKnob)
     return 0;
 }
 
-int tSVFSetQ(tSVF *svf, float Q)
+int     tSVFSetQ(tSVF *svf, float Q)
 {
     svf->k = 1.0f/clipAU(0.01f,Q,10.0f);
     svf->a1 = 1.0f/(1.0f + svf->g * (svf->g + svf->k));
@@ -844,7 +1028,7 @@ int tSVFSetQ(tSVF *svf, float Q)
     return 0;
 }
 
-int tSVFInit(tSVF *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
+int     tSVFInit(tSVF *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
 {
     svf->inv_sr = 1.0f/sr;
     svf->type = type;
@@ -870,7 +1054,7 @@ int tSVFInit(tSVF *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
 
 
 
-float tSVFEfficientTick(tSVF *svf, float v0)
+float   tSVFEfficientTick(tSVF *svf, float v0)
 {
     float v1,v2,v3;
     float low,high;
@@ -889,7 +1073,7 @@ float tSVFEfficientTick(tSVF *svf, float v0)
     
 }
 
-int tSVFEfficientSetFreq(tSVF *svf, uint16_t cutoffKnob)
+int     tSVFEfficientSetFreq(tSVF *svf, uint16_t cutoffKnob)
 {
     svf->g = filtertan[cutoffKnob];
     svf->a1 = 1.0f/(1.0f + svf->g * (svf->g + svf->k));
@@ -899,7 +1083,7 @@ int tSVFEfficientSetFreq(tSVF *svf, uint16_t cutoffKnob)
     return 0;
 }
 
-int tSVFEfficientSetQ(tSVF *svf, float Q)
+int     tSVFEfficientSetQ(tSVF *svf, float Q)
 {
     svf->k = 1.0f/Q;
     svf->a1 = 1.0f/(1.0f + svf->g * (svf->g + svf->k));
@@ -909,7 +1093,7 @@ int tSVFEfficientSetQ(tSVF *svf, float Q)
     return 0;
 }
 
-int tSVFEfficientInit(tSVFEfficient *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
+int     tSVFEfficientInit(tSVFEfficient *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
 {
     svf->inv_sr = 1.0f/sr;
     svf->type = type;
@@ -933,8 +1117,7 @@ int tSVFEfficientInit(tSVFEfficient *svf, float sr, SVFType type, uint16_t cutof
     return 0;
 }
 
-/* Envelope detect */
-float tEnvelopeFollowerTick(tEnvelopeFollower *ef, float x)
+float   tEnvelopeFollowerTick(tEnvelopeFollower *ef, float x)
 {
     if (x < 0.0f ) x = -x;  /* Absolute value. */
     
@@ -949,17 +1132,17 @@ float tEnvelopeFollowerTick(tEnvelopeFollower *ef, float x)
     return ef->y;
 }
 
-int tDecayCoeff(tEnvelopeFollower *ef, float decayCoeff)
+int     tEnvelopeFollowerDecayCoeff(tEnvelopeFollower *ef, float decayCoeff)
 {
     return ef->d_coeff = decayCoeff;
 }
 
-int tAttackThresh(tEnvelopeFollower *ef, float attackThresh)
+int     tEnvelopeFollowerAttackThresh(tEnvelopeFollower *ef, float attackThresh)
 {
     return ef->a_thresh = attackThresh;
 }
 
-int tEnvelopeFollowerInit(tEnvelopeFollower *ef, float attackThreshold, float decayCoeff)
+int     tEnvelopeFollowerInit(tEnvelopeFollower *ef, float attackThreshold, float decayCoeff)
 {
     ef->y = 0.0f;
     ef->a_thresh = attackThreshold;
@@ -969,7 +1152,7 @@ int tEnvelopeFollowerInit(tEnvelopeFollower *ef, float attackThreshold, float de
 }
 
 /* Highpass */
-int tHighpassFreq(tHighpass *hp, float freq)
+int     tHighpassFreq(tHighpass *hp, float freq)
 {
     
     hp->R = (1.0f-((freq * 2.0f * 3.14f)*hp->inv_sr));
@@ -978,14 +1161,14 @@ int tHighpassFreq(tHighpass *hp, float freq)
 }
 
 // From JOS DC Blocker
-float tHighpassTick(tHighpass *hp, float x)
+float   tHighpassTick(tHighpass *hp, float x)
 {
     hp->ys = x - hp->xs + hp->R * hp->ys;
     hp->xs = x;
     return hp->ys;
 }
 
-int tHighpassInit(tHighpass *hp, float sr, float freq)
+int     tHighpassInit(tHighpass *hp, float sr, float freq)
 {
     hp->inv_sr = 1.0f/sr;
     hp->R = (1.0f-((freq * 2.0f * 3.14f)*hp->inv_sr));
@@ -996,14 +1179,14 @@ int tHighpassInit(tHighpass *hp, float sr, float freq)
 }
 
 /* Cycle */
-int tCycleFreq(tCycle *c, float freq)
+int     tCycleFreq(tCycle *c, float freq)
 {
     c->inc = freq * c->inv_sr;
     
     return 0;
 }
 
-float tCycleTick(tCycle *c)
+float   tCycleTick(tCycle *c)
 {
     // Phasor increment
     c->phase += c->inc;
@@ -1019,7 +1202,7 @@ float tCycleTick(tCycle *c)
     return (samp0 + (samp1 - samp0) * fracPart);
 }
 
-int tCycleInit(tCycle *c, float sr, const float *table, int len)
+int     tCycleInit(tCycle *c, float sr, const float *table, int len)
 {
     // Underlying phasor
     c->inc = 0.0f;
@@ -1033,14 +1216,14 @@ int tCycleInit(tCycle *c, float sr, const float *table, int len)
 }
 
 /* Sawtooth */
-int tSawtoothFreq(tSawtooth *s, float freq)
+int     tSawtoothFreq(tSawtooth *s, float freq)
 {
     s->inc = freq * s->inv_sr;
     
     return 0;
 }
 
-float tSawtoothTick(tSawtooth *s)
+float   tSawtoothTick(tSawtooth *s)
 {
     // Phasor increment
     s->phase += s->inc;
@@ -1050,7 +1233,7 @@ float tSawtoothTick(tSawtooth *s)
 }
 
 
-int tSawtoothInit(tSawtooth *s, float sr)
+int     tSawtoothInit(tSawtooth *s, float sr)
 {
     // Underlying phasor
     s->inc = 0.0f;
@@ -1061,14 +1244,14 @@ int tSawtoothInit(tSawtooth *s, float sr)
 }
 
 /* Triangle */
-int tTriangleFreq(tTriangle *t, float freq)
+int     tTriangleFreq(tTriangle *t, float freq)
 {
     t->inc = freq * t->inv_sr;
     
     return 0;
 }
 
-float tTriangleTick(tTriangle *t)
+float   tTriangleTick(tTriangle *t)
 {
     // Phasor increment
     t->phase += t->inc;
@@ -1081,7 +1264,7 @@ float tTriangleTick(tTriangle *t)
     
 }
 
-int tTriangleInit(tTriangle *t, float sr)
+int     tTriangleInit(tTriangle *t, float sr)
 {
     // Underlying phasor
     t->inc = 0.0f;
@@ -1092,7 +1275,7 @@ int tTriangleInit(tTriangle *t, float sr)
 }
 
 /* Square */
-int tPulseWidth(tPulse *pl, float pwidth)
+int     tPulseWidth(tPulse *pl, float pwidth)
 {
     //pwidth [0.0, 1.0)
     
@@ -1101,14 +1284,14 @@ int tPulseWidth(tPulse *pl, float pwidth)
     return 0;
 }
 
-int tPulseFreq(tPulse *pl, float freq)
+int     tPulseFreq(tPulse *pl, float freq)
 {
     pl->inc = freq * pl->inv_sr;
     
     return 0;
 }
 
-float tPulseTick(tPulse *pl)
+float   tPulseTick(tPulse *pl)
 {
     // Phasor increment
     pl->phase += pl->inc;
@@ -1120,7 +1303,7 @@ float tPulseTick(tPulse *pl)
 }
 
 
-int tPulseInit(tPulse *pl, float sr, float pwidth)
+int     tPulseInit(tPulse *pl, float sr, float pwidth)
 {
     // Underlying phasor
     pl->inc = 0.0f;
@@ -1130,7 +1313,7 @@ int tPulseInit(tPulse *pl, float sr, float pwidth)
     pl->pw = clipAU(0.05f,pwidth,0.95f);
 }
 
-float tNoiseTick(tNoise *n)
+float   tNoiseTick(tNoise *n)
 {
     float rand = n->rand();
     
@@ -1149,28 +1332,28 @@ float tNoiseTick(tNoise *n)
     }
 }
 
-int tNoiseInit(tNoise *n, float sr, float (*randomNumberGenerator)(), NoiseType type)
+int     tNoiseInit(tNoise *n, float sr, float (*randomNumberGenerator)(), NoiseType type)
 {
     n->type = type;
     n->rand = randomNumberGenerator;
     return 0;
 }
 
-int tRampSetTime(tRamp *r, float time)
+int     tRampSetTime(tRamp *r, float time)
 {
     r->time = time;
     COMPUTE_INC();
     return 0;
 }
 
-int tRampSetDest(tRamp *r, float dest)
+int     tRampSetDest(tRamp *r, float dest)
 {
     r->dest = dest;
     COMPUTE_INC();
     return 0;
 }
 
-float tRampTick(tRamp *r) {
+float   tRampTick(tRamp *r) {
     
     r->curr += r->inc;
     
@@ -1179,7 +1362,7 @@ float tRampTick(tRamp *r) {
     return r->curr;
 }
 
-int tRampInit(tRamp *r, float sr, float time, int samples_per_tick)
+int     tRampInit(tRamp *r, float sr, float time, int samples_per_tick)
 {
     r->inv_sr_ms = 1.0f/(sr*0.001f);
     r->curr = 0.0f;

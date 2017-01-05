@@ -21,8 +21,10 @@ static const std::vector<std::string> cSliderNames =
     "Noise",
     "Attack",
     "Decay",
-    "TZFrequency",
-    "TZRadius",
+    "BiQuadNotchFreq",
+    "BiQuadNotchRadius",
+    "BiQuadResFreq",
+    "BiQuadResRadius",
     "Gain"
 };
 

@@ -32,6 +32,9 @@ float gAttack,gDecay;
 float gOnePolePole;
 float gOneZeroZero;
 float gTwoZeroFreq, gTwoZeroRadius;
+float gTwoPoleFreq, gTwoPoleRadius;
+float gBiQuadNotchFreq, gBiQuadNotchRadius;
+float gBiQuadResFreq, gBiQuadResRadius;
 bool  gTrigger;
 float gRevTime,gRevMix;
 
@@ -48,10 +51,14 @@ tSVF        svf;
 tEnvelope   env;
 
 tOnePole onepole;
+tTwoPole twopole;
 
 tOneZero onezero;
-
 tTwoZero twozero;
+
+tBiQuad biquad;
+
+
 
 tNRev rev;
 
@@ -60,7 +67,9 @@ tRamp ramp;
 #define REVERB 0
 #define SVF 0
 #define ONEPOLE 0
-#define ONEZERO 1
+#define ONEZERO 0
+#define TWOZERO 0
+#define TWOPOLE 0
 
 
 void init(float sampleRate)
@@ -89,13 +98,22 @@ void init(float sampleRate)
     tOneZeroInit(&onezero, 0.5f);
 #endif
     
+#if TWOZERO
     tTwoZeroInit(&twozero, sampleRate);
+#endif
+    
+#if TWOPOLE
+    tTwoPoleInit(&twopole, sampleRate);
+#endif
+    
+    tBiQuadInit(&biquad, sampleRate);
     
 #if REVERB
     tNRevInit(&rev, sampleRate, 0.0f, nRevDelayBufs);
 #endif
     
     tRampInit(&ramp, sampleRate, 20.0f, 1);
+    
     
 }
 
@@ -122,7 +140,6 @@ void block(void)
     {
         gDecay = val;
         float temp =  2.0f + 2000.0f * gDecay;
-        DBG(String(temp));
         tEnvelopeDecay(&env, 2.0f + 2000.0f * gDecay);
     }
     
@@ -155,7 +172,8 @@ void block(void)
             tTriangleFreq(&osc[i], (50.0f + gFund * 500.0f) * (i+1));
         }
     }
-    /*
+    
+#if ONEZERO
     val = getSliderValue("Zero");
     
     if (gOneZeroZero != val)
@@ -164,8 +182,9 @@ void block(void)
         
         tOneZeroSetZero(&onezero, gOneZeroZero);
     }
-     */
+#endif
     
+#if TWOZERO
     val = getSliderValue("TZFrequency");
     
     if (gTwoZeroFreq != val)
@@ -183,8 +202,7 @@ void block(void)
         
         tTwoZeroSetNotch(&twozero, gTwoZeroFreq * 10000.0f, gTwoZeroRadius);
     }
-    
-    
+#endif
     
 #if SVF
     // SVF Cutoff
@@ -219,6 +237,62 @@ void block(void)
         tOnePoleSetPole(&onepole, gOnePolePole);
     }
 #endif
+    
+#if TWOPOLE
+    val = getSliderValue("TwoPoleFreq");
+    
+    if (gTwoPoleFreq != val)
+    {
+        gTwoPoleFreq = val;
+        
+        tTwoPoleSetResonance(&twopole, gTwoPoleFreq, gTwoPoleRadius, 0);
+    }
+    
+    val = getSliderValue("TwoPoleRadius");
+    
+    if (gTwoPoleRadius != val)
+    {
+        gTwoPoleRadius = val;
+        
+        tTwoPoleSetResonance(&twopole, gTwoPoleFreq, gTwoPoleRadius, 0);
+    }
+#endif
+    
+    val = getSliderValue("BiQuadNotchFreq");
+    
+    if (gBiQuadNotchFreq != val)
+    {
+        gBiQuadNotchFreq = val;
+        
+        tBiQuadSetNotch(&biquad, gBiQuadNotchFreq * 10000.0f, gBiQuadNotchRadius);
+    }
+    
+    val = getSliderValue("BiQuadNotchRadius");
+    
+    if (gBiQuadNotchRadius != val)
+    {
+        gBiQuadNotchRadius = val;
+        
+        tBiQuadSetNotch(&biquad, gBiQuadNotchFreq, gBiQuadNotchRadius);
+    }
+    
+    val = getSliderValue("BiQuadResFreq");
+    
+    if (gBiQuadResFreq != val)
+    {
+        gBiQuadResFreq = val;
+        
+        tBiQuadSetResonance(&biquad, gBiQuadResFreq * 10000.0f, gBiQuadResRadius, 0);
+    }
+    
+    val = getSliderValue("BiQuadResRadius");
+    
+    if (gBiQuadResRadius != val)
+    {
+        gBiQuadResRadius = val;
+        
+        tBiQuadSetResonance(&biquad, gBiQuadResFreq * 10000.0f, gBiQuadResRadius, 0);
+    }
     
 #if REVERB
     val = getSliderValue("Reverb Time");
@@ -271,7 +345,15 @@ float tick(float input)
     sample = tSVFTick(&svf, sample);
 #endif
     
+#if TWOZERO
     sample = tTwoZeroTick(&twozero, sample);
+#endif
+    
+#if TWOPOLE
+    sample = tTwoPoleTick(&twopole, sample);
+#endif
+    
+    sample = tBiQuadTick(&biquad, sample);
     
     // Gain ramp.
     sample *= tRampTick(&ramp);

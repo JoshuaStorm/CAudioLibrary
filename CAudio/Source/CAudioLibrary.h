@@ -52,13 +52,35 @@ typedef struct _tOnePole
     
 } tOnePole;
 
-int      tOnePoleInit(tOnePole *f, float thePole);
-void     tOnePoleSetB0(tOnePole *f, float b0);
-void     tOnePoleSetA1(tOnePole *f, float a1);
-void     tOnePoleSetPole(tOnePole *f, float thePole);
+int      tOnePoleInit           (tOnePole *f, float thePole);
+void     tOnePoleSetB0          (tOnePole *f, float b0);
+void     tOnePoleSetA1          (tOnePole *f, float a1);
+void     tOnePoleSetPole        (tOnePole *f, float thePole);
 void     tOnePoleSetCoefficients(tOnePole *f, float b0, float a1);
-void     tOnePoleSetGain(tOnePole *f, float gain);
-float    tOnePoleTick(tOnePole *f, float input);
+void     tOnePoleSetGain        (tOnePole *f, float gain);
+float    tOnePoleTick           (tOnePole *f, float input);
+
+/* TwoPole */
+typedef struct _tTwoPole
+{
+    float gain;
+    float a0, a1, a2;
+    float b0;
+    
+    float sr, inv_sr;
+    
+    float lastOut[2];
+    
+} tTwoPole;
+
+int      tTwoPoleInit           (tTwoPole *f, float sr);
+void     tTwoPoleSetB0          (tTwoPole *f, float b0);
+void     tTwoPoleSetA1          (tTwoPole *f, float a1);
+void     tTwoPoleSetA2          (tTwoPole *f, float a2);
+void     tTwoPoleSetResonance   (tTwoPole *f, float freq, float radius, int normalize);
+void     tTwoPoleSetCoefficients(tTwoPole *f, float b0, float a1, float a2);
+void     tTwoPoleSetGain        (tTwoPole *f, float gain);
+float    tTwoPoleTick           (tTwoPole *f, float input);
 
 /* OneZero */
 typedef struct _tOneZero
@@ -119,6 +141,31 @@ void     tPoleZeroSetAllpass(tPoleZero *pzf, float coeff);
 void     tPoleZeroSetBlockZero(tPoleZero *pzf, float thePole);
 void     tPoleZeroSetGain(tPoleZero *pzf, float gain);
 float    tPoleZeroTick(tPoleZero *pzf, float input);
+
+/* BiQuad */
+typedef struct _tBiQuad
+{
+    float gain;
+    float a0, a1, a2;
+    float b0, b1, b2;
+    
+    float sr, inv_sr;
+    
+    float lastIn[2];
+    float lastOut[2];
+    
+    
+} tBiQuad;
+
+int      tBiQuadInit           (tBiQuad *f, float sr);
+void     tBiQuadSetB0          (tBiQuad *f, float b0);
+void     tBiQuadSetA1          (tBiQuad *f, float a1);
+void     tBiQuadSetA2          (tBiQuad *f, float a2);
+void     tBiQuadSetNotch       (tBiQuad *f, float freq, float radius);
+void     tBiQuadSetResonance   (tBiQuad *f, float freq, float radius, int normalize);
+void     tBiQuadSetCoefficients(tBiQuad *f, float b0, float a1, float a2);
+void     tBiQuadSetGain        (tBiQuad *f, float gain);
+float    tBiQuadTick           (tBiQuad *f, float input);
 
 typedef struct _tDelay
 {
