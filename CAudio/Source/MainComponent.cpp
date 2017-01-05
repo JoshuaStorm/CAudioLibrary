@@ -15,11 +15,21 @@
 */
 
     //==============================================================================
-MainContentComponent::MainContentComponent()
+MainContentComponent::MainContentComponent():
+settings(*this,
+          0,
+          2,
+          0,
+          2,
+          false,
+          false,
+          true,
+          false)
 {
-    setSize (800, 600);
+    setSize (1100, 800);
     
     addAndMakeVisible(ui);
+    addAndMakeVisible(settings);
     
     setAudioChannels (2, 2);
 }
@@ -30,7 +40,7 @@ MainContentComponent::~MainContentComponent()
 }
 
 //==============================================================================
-void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sr) 
+void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sr)
 {
     gain = 0.0f;
     timer = 0;
@@ -117,8 +127,10 @@ void MainContentComponent::paint (Graphics& g)
 
 void MainContentComponent::resized() 
 {
-    ui.setTopLeftPosition(0, 0);
     ui.setBounds(getLocalBounds());
+    
+    settings.setTopLeftPosition(0, 300);
+    settings.setSize(500,800);
 }
 
 void MainContentComponent::sliderValueChanged(Slider* slider)

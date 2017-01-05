@@ -7,11 +7,11 @@
     <GROUP id="{42482753-745C-4A53-F29E-D0735714B052}" name="Source">
       <GROUP id="{D0EE54B8-48FD-F6DF-6224-DAD02C41B4F2}" name="CAudio">
         <GROUP id="{5645723F-B7E1-3CA2-369A-7D126329A206}" name="Library">
-          <FILE id="BieEDy" name="Wavetables.c" compile="1" resource="0" file="Source/Wavetables.c"/>
-          <FILE id="ZwF6st" name="Wavetables.h" compile="0" resource="0" file="Source/Wavetables.h"/>
           <FILE id="ICKF1E" name="CAudioLibrary.h" compile="0" resource="0" file="Source/CAudioLibrary.h"/>
           <FILE id="mZzdFs" name="CAudioLibrary.cpp" compile="1" resource="0"
                 file="Source/CAudioLibrary.cpp"/>
+          <FILE id="BieEDy" name="Wavetables.c" compile="1" resource="0" file="Source/Wavetables.c"/>
+          <FILE id="ZwF6st" name="Wavetables.h" compile="0" resource="0" file="Source/Wavetables.h"/>
         </GROUP>
         <GROUP id="{74B8D251-850E-42A7-CAE2-BF602CAB0D63}" name="Test">
           <FILE id="s89kih" name="CAudioUtilities.h" compile="0" resource="0"

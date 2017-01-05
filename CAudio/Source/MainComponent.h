@@ -18,7 +18,7 @@
 #include "CAudioLibraryTest.h"
 
 
-class MainContentComponent   :  public AudioAppComponent, public Slider::Listener
+class MainContentComponent   :  public AudioAppComponent, public Slider::Listener, public AudioDeviceManager
 {
 public:
     //==============================================================================
@@ -50,6 +50,7 @@ private:
     double sampleRate;
     
     UIComponent ui;
+    AudioDeviceSelectorComponent settings;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };
