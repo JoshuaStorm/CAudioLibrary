@@ -35,9 +35,28 @@ static const std::vector<std::string> cButtonNames =
     "Tap"
 };
 
+static const std::vector<std::string> cComboBoxNames =
+{
+    "Waveform"
+};
+
+
+typedef enum WaveformType {
+    Sine=0,Triangle,Sawtooth,Square,WaveformTypeNil
+}WaveformType;
+static const std::vector<std::string> cWaveformType =
+{
+    "Sine",
+    "Triangle",
+    "Sawtooth",
+    "Square"
+};
+
 std::vector<float> cSliderValues(cSliderNames.size());
 
 std::vector<bool> cButtonStates(cButtonNames.size());
+
+std::vector<int> cComboBoxStates(cButtonNames.size());
 
 void printSliderValues(void)
 {
@@ -65,6 +84,29 @@ void setButtonState(String name, bool on)
         if (name == cButtonNames[i])
         {
             cButtonStates[i] = on;
+        }
+    }
+}
+
+int getComboBoxState(String name)
+{
+    for (int i = 0; i < cComboBoxNames.size(); i++)
+    {
+        if (name == cComboBoxNames[i])
+        {
+            return cComboBoxStates[i];
+        }
+    }
+}
+
+void setComboBoxState(String name, int idx)
+{
+    DBG("set state: " + name + " " + String(idx));
+    for (int i = 0; i < cComboBoxNames.size(); i++)
+    {
+        if (name == cComboBoxNames[i])
+        {
+            cComboBoxStates[i] = idx;
         }
     }
 }
@@ -116,6 +158,9 @@ static const int cLabelWidth  = cSliderWidth + cXSpacing;
 
 static const int cButtonHeight = 30;
 static const int cButtonWidth  = 60;
+
+static const int cBoxHeight = 20;
+static const int cBoxWidth  =  100;
 
 
 

@@ -298,14 +298,10 @@ typedef struct _tCycle
     float inc;
     float inv_sr;
     
-    // Wavetable synthesis
-    const float *wt; //wavetable
-    int wtlen; //wavetable length
-    
 } tCycle;
 
-int      tCycleInit(tCycle *c, float sr, const float *table, int len);
-int      tCycleFreq(tCycle *c, float freq);
+int      tCycleInit(tCycle *c, float sr);
+int      tCycleSetFreq(tCycle *c, float freq);
 float    tCycleTick(tCycle *c);
 
 /* Sawtooth */
@@ -313,46 +309,42 @@ typedef struct _tSawtooth
 {
     // Underlying phasor
     float phase;
-    float inc;
+    float inc,freq;
     float inv_sr;
     
 } tSawtooth;
 
 int      tSawtoothInit(tSawtooth *t, float sr);
-int      tSawtoothFreq(tSawtooth *s, float freq);
+int      tSawtoothSetFreq(tSawtooth *s, float freq);
 float    tSawtoothTick(tSawtooth *s);
-int      tSawtoothInit(tSawtooth *s, float sr);
 
 /* Triangle */
 typedef struct _tTriangle
 {
     // Underlying phasor
     float phase;
-    float inc;
+    float inc,freq;
     float inv_sr;
     
 } tTriangle;
 
 int      tTriangleInit(tTriangle *t, float sr);
-int      tTriangleFreq(tTriangle *t, float freq);
+int      tTriangleSetFreq(tTriangle *t, float freq);
 float    tTriangleTick(tTriangle *t);
 
 /* Pulse */
-typedef struct _tPulse
+typedef struct _tSquare
 {
     // Underlying phasor
     float phase;
-    float inc;
+    float inc,freq;
     float inv_sr;
     
-    float pw;
-    
-} tPulse;
+} tSquare;
 
-int      tPulseInit  (tPulse *p, float sr, float pwidth);
-int      tPulseWidth (tPulse *p, float pwidth);
-int      tPulseFreq  (tPulse *p, float freq);
-float    tPulseTick  (tPulse *p);
+int      tSquareInit  (tSquare *p, float sr);
+int      tSquareSetFreq  (tSquare *p, float freq);
+float    tSquareTick  (tSquare *p);
 
 
 /* Noise */

@@ -31,6 +31,22 @@ float dbuf1[DELAY_BUFFER_LENGTH_2];
 float dbuf2[DELAY_BUFFER_LENGTH_2];
 float dbuf3[DELAY_BUFFER_LENGTH_2];
 
+typedef enum TableName
+{
+    T20 = 0,
+    T40,
+    T80,
+    T160,
+    T320,
+    T640,
+    T1280,
+    T2560,
+    T5120,
+    T10240,
+    T20480,
+    TableNameNil
+} TableName;
+
 float   clipAU(float min, float val, float max) {
     
     if (val < min) {
@@ -1179,7 +1195,7 @@ int     tHighpassInit(tHighpass *hp, float sr, float freq)
 }
 
 /* Cycle */
-int     tCycleFreq(tCycle *c, float freq)
+int     tCycleSetFreq(tCycle *c, float freq)
 {
     c->inc = freq * c->inv_sr;
     
@@ -1193,125 +1209,371 @@ float   tCycleTick(tCycle *c)
     if (c->phase >= 1.0f) c->phase -= 1.0f;
     
     // Wavetable synthesis
-    float temp = c->wtlen * c->phase;
+    float temp = SINE_TABLE_SIZE * c->phase;
     int intPart = (int)temp;
     float fracPart = temp - (float)intPart;
-    float samp0 = c->wt[intPart];
-    if (++intPart >= c->wtlen) intPart = 0;
-    float samp1 = c->wt[intPart];
+    float samp0 = sinewave[intPart];
+    if (++intPart >= SINE_TABLE_SIZE) intPart = 0;
+    float samp1 = sinewave[intPart];
     return (samp0 + (samp1 - samp0) * fracPart);
 }
 
-int     tCycleInit(tCycle *c, float sr, const float *table, int len)
+int     tCycleInit(tCycle *c, float sr)
 {
     // Underlying phasor
     c->inc = 0.0f;
     c->phase = 0.0f;
     c->inv_sr = 1.0f/sr;
     
-    c->wt = table;
-    c->wtlen = len;
-    
     return 0;
 }
 
 /* Sawtooth */
-int     tSawtoothFreq(tSawtooth *s, float freq)
+int     tSawtoothSetFreq(tSawtooth *c, float freq)
 {
-    s->inc = freq * s->inv_sr;
+    c->freq = freq;
+    c->inc = freq * c->inv_sr;
     
     return 0;
 }
 
-float   tSawtoothTick(tSawtooth *s)
+float   tSawtoothTick(tSawtooth *c)
 {
     // Phasor increment
-    s->phase += s->inc;
-    if (s->phase >= 1.0f) s->phase -= 1.0f;
+    c->phase += c->inc;
+    if (c->phase >= 1.0f) c->phase -= 1.0f;
     
-    return ((s->phase * 2.0f) - 1.0f);
+    float out = 0.0f;
+    float w1, w2;
+    
+    int idx = (int)(c->phase * TRI_TABLE_SIZE);
+    
+    // Wavetable synthesis
+    
+    if (c->freq <= 20.0f)
+    {
+        out = sawtooth[T20][idx];
+    }
+    else if (c->freq <= 40.0f)
+    {
+        w1 = (40.0f - c->freq) / 20.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T20][idx] * w1) + (sawtooth[T40][idx] * w2);
+    }
+    else if (c->freq <= 80.0f)
+    {
+        w1 = (80.0f - c->freq) / 40.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T40][idx] * w1) + (sawtooth[T80][idx] * w2);
+    }
+    else if (c->freq <= 160.0f)
+    {
+        w1 = (160.0f - c->freq) / 80.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T80][idx] * w1) + (sawtooth[T160][idx] * w2);
+    }
+    else if (c->freq <= 320.0f)
+    {
+        w1 = (320.0f - c->freq) / 160.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T160][idx] * w1) + (sawtooth[T320][idx] * w2);
+    }
+    else if (c->freq <= 640.0f)
+    {
+        w1 = (640.0f - c->freq) / 320.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T320][idx] * w1) + (sawtooth[T640][idx] * w2);
+    }
+    else if (c->freq <= 1280.0f)
+    {
+        w1 = (1280.0f - c->freq) / 640.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T640][idx] * w1) + (sawtooth[T1280][idx] * w2);
+    }
+    else if (c->freq <= 2560.0f)
+    {
+        w1 = (2560.0f - c->freq) / 1280.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T1280][idx] * w1) + (sawtooth[T2560][idx] * w2);
+    }
+    else if (c->freq <= 5120.0f)
+    {
+        w1 = (5120.0f - c->freq) / 2560.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T2560][idx] * w1) + (sawtooth[T5120][idx] * w2);
+    }
+    else if (c->freq <= 10240.0f)
+    {
+        w1 = (10240.0 - c->freq) / 5120.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T5120][idx] * w1) + (sawtooth[T10240][idx] * w2);
+    }
+    else if (c->freq <= 20480.0f)
+    {
+        w1 = (20480.0f - c->freq) / 10240.0f;
+        w2 = 1.0f - w1;
+        
+        out = (sawtooth[T10240][idx] * w1) + (sawtooth[T20480][idx] * w2);
+    }
+    else
+    {
+        out = sawtooth[T20480][idx];
+    }
+
+    return out;
 }
 
-
-int     tSawtoothInit(tSawtooth *s, float sr)
+int     tSawtoothInit(tSawtooth *c, float sr)
 {
     // Underlying phasor
-    s->inc = 0.0f;
-    s->phase = 0.0f;
-    s->inv_sr = 1.0f/sr;
+    c->inc = 0.0f;
+    c->phase = 0.0f;
+    c->inv_sr = 1.0f/sr;
     
     return 0;
 }
 
 /* Triangle */
-int     tTriangleFreq(tTriangle *t, float freq)
+int     tTriangleSetFreq(tTriangle *c, float freq)
 {
-    t->inc = freq * t->inv_sr;
+    c->freq = freq;
+    c->inc = freq * c->inv_sr;
     
     return 0;
 }
 
-float   tTriangleTick(tTriangle *t)
+
+
+float   tTriangleTick(tTriangle *c)
 {
     // Phasor increment
-    t->phase += t->inc;
-    if (t->phase >= 1.0f) t->phase -= 1.0f;
+    c->phase += c->inc;
+    if (c->phase >= 1.0f) c->phase -= 1.0f;
     
-    float phase =  t->phase * 2.0f;
-    if (phase > 1.0f) phase = 2.0f - phase;
-    phase = (phase * 2.0f) - 1.0f;
-    return phase;
+    float out = 0.0f;
+    float w1, w2;
     
+    int idx = (int)(c->phase * TRI_TABLE_SIZE);
+    
+    // Wavetable synthesis
+    
+    if (c->freq <= 20.0f)
+    {
+        out = triangle[T20][idx];
+    }
+    else if (c->freq <= 40.0f)
+    {
+        w1 = (40.0f - c->freq) / 20.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T20][idx] * w1) + (triangle[T40][idx] * w2);
+    }
+    else if (c->freq <= 80.0f)
+    {
+        w1 = (80.0f - c->freq) / 40.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T40][idx] * w1) + (triangle[T80][idx] * w2);
+    }
+    else if (c->freq <= 160.0f)
+    {
+        w1 = (160.0f - c->freq) / 80.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T80][idx] * w1) + (triangle[T160][idx] * w2);
+    }
+    else if (c->freq <= 320.0f)
+    {
+        w1 = (320.0f - c->freq) / 160.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T160][idx] * w1) + (triangle[T320][idx] * w2);
+    }
+    else if (c->freq <= 640.0f)
+    {
+        w1 = (640.0f - c->freq) / 320.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T320][idx] * w1) + (triangle[T640][idx] * w2);
+    }
+    else if (c->freq <= 1280.0f)
+    {
+        w1 = (1280.0f - c->freq) / 640.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T640][idx] * w1) + (triangle[T1280][idx] * w2);
+    }
+    else if (c->freq <= 2560.0f)
+    {
+        w1 = (2560.0f - c->freq) / 1280.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T1280][idx] * w1) + (triangle[T2560][idx] * w2);
+    }
+    else if (c->freq <= 5120.0f)
+    {
+        w1 = (5120.0f - c->freq) / 2560.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T2560][idx] * w1) + (triangle[T5120][idx] * w2);
+    }
+    else if (c->freq <= 10240.0f)
+    {
+        w1 = (10240.0 - c->freq) / 5120.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T5120][idx] * w1) + (triangle[T10240][idx] * w2);
+    }
+    else if (c->freq <= 20480.0f)
+    {
+        w1 = (20480.0f - c->freq) / 10240.0f;
+        w2 = 1.0f - w1;
+        
+        out = (triangle[T10240][idx] * w1) + (triangle[T20480][idx] * w2);
+    }
+    else
+    {
+        out = triangle[T20480][idx];
+    }
+    
+    return out;
 }
 
-int     tTriangleInit(tTriangle *t, float sr)
+int     tTriangleInit(tTriangle *c, float sr)
 {
     // Underlying phasor
-    t->inc = 0.0f;
-    t->phase = 0.0f;
-    t->inv_sr = 1.0f/sr;
+    c->inc = 0.0f;
+    c->phase = 0.0f;
+    c->inv_sr = 1.0f/sr;
     
-    return 0; 
+    return 0;
 }
 
 /* Square */
-int     tPulseWidth(tPulse *pl, float pwidth)
+int     tSquareSetFreq(tSquare *c, float freq)
 {
-    //pwidth [0.0, 1.0)
-    
-    pl->pw = clipAU(0.05f,pwidth,0.95f);
+    c->freq = freq;
+    c->inc = freq * c->inv_sr;
     
     return 0;
 }
 
-int     tPulseFreq(tPulse *pl, float freq)
-{
-    pl->inc = freq * pl->inv_sr;
-    
-    return 0;
-}
 
-float   tPulseTick(tPulse *pl)
+
+float   tSquareTick(tSquare *c)
 {
     // Phasor increment
-    pl->phase += pl->inc;
-    if (pl->phase >= 1.0f) pl->phase -= 1.0f;
+    c->phase += c->inc;
+    if (c->phase >= 1.0f) c->phase -= 1.0f;
     
+    float out = 0.0f;
+    float w1, w2;
     
-    if (pl->phase < pl->pw) return 1.0f;
-    else return -1.0f;
+    int idx = (int)(c->phase * TRI_TABLE_SIZE);
+    
+    // Wavetable synthesis
+    
+    if (c->freq <= 20.0f)
+    {
+        out = squarewave[T20][idx];
+    }
+    else if (c->freq <= 40.0f)
+    {
+        w1 = (40.0f - c->freq) / 20.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T20][idx] * w1) + (squarewave[T40][idx] * w2);
+    }
+    else if (c->freq <= 80.0f)
+    {
+        w1 = (80.0f - c->freq) / 40.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T40][idx] * w1) + (squarewave[T80][idx] * w2);
+    }
+    else if (c->freq <= 160.0f)
+    {
+        w1 = (160.0f - c->freq) / 80.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T80][idx] * w1) + (squarewave[T160][idx] * w2);
+    }
+    else if (c->freq <= 320.0f)
+    {
+        w1 = (320.0f - c->freq) / 160.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T160][idx] * w1) + (squarewave[T320][idx] * w2);
+    }
+    else if (c->freq <= 640.0f)
+    {
+        w1 = (640.0f - c->freq) / 320.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T320][idx] * w1) + (squarewave[T640][idx] * w2);
+    }
+    else if (c->freq <= 1280.0f)
+    {
+        w1 = (1280.0f - c->freq) / 640.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T640][idx] * w1) + (squarewave[T1280][idx] * w2);
+    }
+    else if (c->freq <= 2560.0f)
+    {
+        w1 = (2560.0f - c->freq) / 1280.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T1280][idx] * w1) + (squarewave[T2560][idx] * w2);
+    }
+    else if (c->freq <= 5120.0f)
+    {
+        w1 = (5120.0f - c->freq) / 2560.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T2560][idx] * w1) + (squarewave[T5120][idx] * w2);
+    }
+    else if (c->freq <= 10240.0f)
+    {
+        w1 = (10240.0 - c->freq) / 5120.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T5120][idx] * w1) + (squarewave[T10240][idx] * w2);
+    }
+    else if (c->freq <= 20480.0f)
+    {
+        w1 = (20480.0f - c->freq) / 10240.0f;
+        w2 = 1.0f - w1;
+        
+        out = (squarewave[T10240][idx] * w1) + (squarewave[T20480][idx] * w2);
+    }
+    else
+    {
+        out = squarewave[T20480][idx];
+    }
+    
+    return out;
 }
 
-
-int     tPulseInit(tPulse *pl, float sr, float pwidth)
+int     tSquareInit(tSquare *c, float sr)
 {
     // Underlying phasor
-    pl->inc = 0.0f;
-    pl->phase = 0.0f;
-    pl->inv_sr = 1.0f/sr;
+    c->inc = 0.0f;
+    c->phase = 0.0f;
+    c->inv_sr = 1.0f/sr;
     
-    pl->pw = clipAU(0.05f,pwidth,0.95f);
+    return 0;
 }
+
 
 float   tNoiseTick(tNoise *n)
 {

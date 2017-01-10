@@ -129,7 +129,7 @@ void MainContentComponent::resized()
 {
     ui.setBounds(getLocalBounds());
     
-    settings.setTopLeftPosition(0, 300);
+    settings.setTopLeftPosition(300, 300);
     settings.setSize(500,800);
 }
 

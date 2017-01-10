@@ -12,6 +12,9 @@
 #define WAVETABLES_H_INCLUDED
 
 #define SINE_TABLE_SIZE 2048
+#define SAW_TABLE_SIZE 2048
+#define SQR_TABLE_SIZE 2048
+#define TRI_TABLE_SIZE 2048
 #define EXP_DECAY_TABLE_SIZE 65536
 #define ATTACK_DECAY_INC_TABLE_SIZE 65536
 #define SHAPER1_TABLE_SIZE 65536
@@ -45,5 +48,11 @@ extern const float tanh1[TANH1_TABLE_SIZE];
 
 /* sine wave table ripped from http://aquaticus.info/pwm-sine-wave */
 extern const float sinewave[SINE_TABLE_SIZE];
+
+
+
+extern const float sawtooth[11][SAW_TABLE_SIZE];
+extern const float triangle[11][TRI_TABLE_SIZE];
+extern const float squarewave[11][SAW_TABLE_SIZE];
 
 #endif  // WAVETABLES_H_INCLUDED

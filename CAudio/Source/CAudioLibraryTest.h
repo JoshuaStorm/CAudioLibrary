@@ -38,10 +38,15 @@ float gBiQuadResFreq, gBiQuadResRadius;
 bool  gTrigger;
 float gRevTime,gRevMix;
 
+WaveformType waveform = Sine;
+
 
 #define NUM_OSC 5
 
-tTriangle osc[NUM_OSC];
+tTriangle tri[NUM_OSC];
+tSquare sqr[NUM_OSC];
+tCycle cyc[NUM_OSC];
+tSawtooth saw[NUM_OSC];
 float oscGain[NUM_OSC] = {0.3, 0.2, .1, .1, .05};
 
 tNoise      noise;
@@ -57,8 +62,6 @@ tOneZero onezero;
 tTwoZero twozero;
 
 tBiQuad biquad;
-
-
 
 tNRev rev;
 
@@ -78,8 +81,17 @@ void init(float sampleRate)
     
     for (int i = 0; i < NUM_OSC; i++)
     {
-        tTriangleInit(&osc[i], sampleRate);
-        tTriangleFreq(&osc[i], 100.0f * (i+1));
+        tTriangleInit(&tri[i], sampleRate);
+        tTriangleSetFreq(&tri[i], 100.0f * (i+1));
+        
+        tCycleInit(&cyc[i], sampleRate);
+        tCycleSetFreq(&cyc[i], 100.0f * (i+1));
+        
+        tSquareInit(&sqr[i], sampleRate);
+        tSquareSetFreq(&sqr[i], 100.0f * (i+1));
+
+        tSawtoothInit(&saw[i], sampleRate);
+        tSawtoothSetFreq(&saw[i], 100.0f * (i+1));
     }
     
     tNoiseInit(&noise, sampleRate, &randomNumberGenerator, NoiseTypeWhite);
@@ -169,7 +181,15 @@ void block(void)
         
         for (int i = 0; i < NUM_OSC; i++)
         {
-            tTriangleFreq(&osc[i], (50.0f + gFund * 500.0f) * (i+1));
+            tTriangleSetFreq(&tri[i], (10.0f + gFund * 1000.0f) * (i+1));
+            
+            tSquareSetFreq(&sqr[i], (10.0f + gFund * 1000.0f) * (i+1));
+            
+            tSawtoothSetFreq(&saw[i], (10.0f + gFund * 1000.0f) * (i+1));
+            
+            tCycleSetFreq(&cyc[i], (10.0f + gFund * 1000.0f) * (i+1));
+            
+            DBG(String(10.0f + gFund * 1000.0f));
         }
     }
     
@@ -273,7 +293,7 @@ void block(void)
     {
         gBiQuadNotchRadius = val;
         
-        tBiQuadSetNotch(&biquad, gBiQuadNotchFreq, gBiQuadNotchRadius);
+        tBiQuadSetNotch(&biquad, gBiQuadNotchFreq * 10000.0f, gBiQuadNotchRadius);
     }
     
     val = getSliderValue("BiQuadResFreq");
@@ -315,6 +335,17 @@ void block(void)
         tNRevSetMix(&rev, gRevMix);
     }
 #endif
+    
+    WaveformType state = (WaveformType) getComboBoxState("Waveform");
+    
+    if (waveform != state)
+    {
+        waveform = state;
+        
+        DBG("waveform: " + cWaveformType[waveform]);
+    }
+    
+    
 }
 
 
@@ -325,15 +356,31 @@ float tick(float input)
     float sample    = 0.0f;
     
     // Oscillators.
-    for (int i = 0; i < NUM_OSC; i++)
-        sample += oscGain[i] * tTriangleTick(&osc[i]);
-    sample *= 0.8f;
+    if (waveform == Sine)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tCycleTick(&cyc[i]);
+    }
+    else if (waveform == Triangle)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tTriangleTick(&tri[i]);
+    }
+    else if (waveform == Square)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tSquareTick(&sqr[i]);
+    }
+    else if (waveform == Sawtooth)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tSawtoothTick(&saw[i]);
+    }
     
+    sample *= 0.8f;
+ 
+#if 0
     // Noise.
     if (gNoiseLevel >= 0.5f)    sample += gNoiseLevel * tNoiseTick(&noise);
     
     // Envelope.
-    sample *= tEnvelopeTick(&env);
+    //sample *= tEnvelopeTick(&env);
     
 #if REVERB
     // Reverb.
@@ -355,8 +402,11 @@ float tick(float input)
     
     sample = tBiQuadTick(&biquad, sample);
     
+#endif
+    
     // Gain ramp.
     sample *= tRampTick(&ramp);
+
     
     return sample;
     
