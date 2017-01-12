@@ -15,7 +15,7 @@
 
 
 #define DELAY_BUFFER_LENGTH 16384
-#define DELAY_BUFFER_LENGTH_2 (DELAY_BUFFER_LENGTH*2)
+#define REV_DELAY_LENGTH 65535
 
 #define VERY_SMALL_FLOAT 1.0e-38f
 
@@ -24,16 +24,74 @@
 #define PI 3.14159265358979
 #define TWO_PI (2 * PI)
 
-/* Ramp */
-typedef struct _tRamp {
+#pragma Oscillators
+// Phasor: basic aliasing phasor
+typedef struct _tPhasor
+{
+    float phase;
     float inc;
-    float inv_sr_ms;
-    float curr,dest;
-    float time;
-    int samples_per_tick;
+    float inv_sr;
     
-} tRamp;
+} tPhasor;
 
+// Cycle: Sine waveform
+typedef struct _tCycle
+{
+    // Underlying phasor
+    float phase;
+    float inc;
+    float inv_sr;
+    
+} tCycle;
+
+// Sawtooth waveform
+typedef struct _tSawtooth
+{
+    // Underlying phasor
+    float phase;
+    float inc,freq;
+    float inv_sr;
+    
+} tSawtooth;
+
+// Triangle waveform
+typedef struct _tTriangle
+{
+    // Underlying phasor
+    float phase;
+    float inc,freq;
+    float inv_sr;
+    
+} tTriangle;
+
+// Square waveform
+typedef struct _tSquare
+{
+    // Underlying phasor
+    float phase;
+    float inc,freq;
+    float inv_sr;
+    
+} tSquare;
+
+// Noise Types
+typedef enum NoiseType
+{
+    NoiseTypeWhite=0,
+    NoiseTypePink,
+    NoiseTypeNil,
+} NoiseType;
+
+// Noise
+typedef struct _tNoise
+{
+    NoiseType type;
+    float pinkb0, pinkb1, pinkb2;
+    float(*rand)();
+    
+} tNoise;
+
+#pragma Filters
 // OnePole filter
 typedef struct _tOnePole
 {
@@ -106,46 +164,6 @@ typedef struct _tBiQuad
     
 } tBiQuad;
 
-// Simple linear interpolating delay line. User must supply own buffer.
-typedef struct _tDelay
-{
-    uint32_t in_index, out_index;
-    float bottomFrac,topFrac;
-    float lastOut,lastIn;
-    float *buff;
-    float delay;
-    
-} tDelay;
-
-// Basic Attack-Decay envelope
-typedef struct _tEnvelope {
-    
-    float inv_sr;
-    const float *exp_buff;
-    const float *inc_buff;
-    uint32_t buff_size;
-    
-    float next;
-    
-    float attackInc, decayInc, rampInc;
-    
-    int inAttack, inDecay, inRamp;
-    
-    int loop;
-    
-    float gain, rampPeak;
-    
-    float attackPhase, decayPhase, rampPhase;
-    
-} tEnvelope;
-
-// Attack-Decay-Sustain-Release envelope
-typedef struct _tADSR {
-    
-    float inv_sr;
-    
-} tADSR;
-
 /* State Variable Filter types */
 typedef enum SVFType {
     SVFTypeHighpass = 0,
@@ -175,6 +193,117 @@ typedef struct _tSVFEfficient {
     
 } tSVFEfficient;
 
+// Highpass filter
+typedef struct _tHighpass
+{
+    float inv_sr;
+    float xs, ys, R;
+    float cutoff;
+    
+} tHighpass;
+
+#pragma Basic Utilities
+/* Ramp */
+typedef struct _tRamp {
+    float inc;
+    float inv_sr_ms;
+    float curr,dest;
+    float time;
+    int samples_per_tick;
+    
+} tRamp;
+
+// Non-interpolating delay line.
+typedef struct _tDelay
+{
+    float gain;
+    float *buff;
+    
+    float lastOut, lastIn;
+    
+    uint32_t inPoint, outPoint;
+    
+    uint32_t delay, maxDelay;
+    
+} tDelay;
+
+// Linear interpolating delay line. User must supply own buffer.
+typedef struct _tDelayL
+{
+    float gain;
+    float *buff;
+    
+    float lastOut, lastIn;
+    
+    uint32_t inPoint, outPoint;
+    
+    uint32_t maxDelay;
+    
+    float delay;
+    
+    float alpha, omAlpha;
+    
+} tDelayL;
+
+// Allpass delay line. User must supply own buffer.
+typedef struct _tDelayA
+{
+    float gain;
+    float *buff;
+    
+    float lastOut, lastIn;
+    
+    uint32_t inPoint, outPoint;
+    
+    uint32_t maxDelay;
+    
+    float delay;
+    
+    float alpha, omAlpha, coeff;
+    
+    float apInput;
+    
+} tDelayA;
+
+
+// Basic Attack-Decay envelope
+typedef struct _tEnvelope {
+    
+    float inv_sr;
+    const float *exp_buff;
+    const float *inc_buff;
+    uint32_t buff_size;
+    
+    float next;
+    
+    float attackInc, decayInc, rampInc;
+    
+    int inAttack, inDecay, inRamp;
+    
+    int loop;
+    
+    float gain, rampPeak;
+    
+    float attackPhase, decayPhase, rampPhase;
+    
+} tEnvelope;
+
+// Attack-Decay-Sustain-Release envelope
+typedef struct _tADSR
+{
+    
+    float inv_sr;
+    
+} tADSR;
+
+#pragma Physical Models
+
+typedef struct _tStifKarplusStrong
+{
+    
+}tStifKarplusStrong;
+
+#pragma Complex/Miscellaneous/Other
 // Envelope Follower
 typedef struct _tEnvelopeFollower
 {
@@ -184,80 +313,7 @@ typedef struct _tEnvelopeFollower
     
 } tEnvelopeFollower;
 
-// Phasor: basic aliasing phasor
-typedef struct _tPhasor
-{
-    float phase;
-    float inc;
-    float inv_sr;
-    
-} tPhasor;
 
-// Cycle: Sine waveform
-typedef struct _tCycle
-{
-    // Underlying phasor
-    float phase;
-    float inc;
-    float inv_sr;
-    
-} tCycle;
-
-// Sawtooth waveform
-typedef struct _tSawtooth
-{
-    // Underlying phasor
-    float phase;
-    float inc,freq;
-    float inv_sr;
-    
-} tSawtooth;
-
-// Triangle waveform
-typedef struct _tTriangle
-{
-    // Underlying phasor
-    float phase;
-    float inc,freq;
-    float inv_sr;
-    
-} tTriangle;
-
-// Square waveform
-typedef struct _tSquare
-{
-    // Underlying phasor
-    float phase;
-    float inc,freq;
-    float inv_sr;
-    
-} tSquare;
-
-// Noise Types
-typedef enum NoiseType
-{
-    NoiseTypeWhite=0,
-    NoiseTypePink,
-    NoiseTypeNil,
-} NoiseType;
-
-// Noise
-typedef struct _tNoise
-{
-    NoiseType type;
-    float pinkb0, pinkb1, pinkb2;
-    float(*rand)();
-    
-} tNoise;
-
-// Highpass filter
-typedef struct _tHighpass
-{
-    float inv_sr;
-    float xs, ys, R;
-    float cutoff;
-    
-} tHighpass;
 
 // PRCRev: Reverb based on Perry Cook algorithm.
 typedef struct _tPRCRev

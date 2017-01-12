@@ -11,15 +11,17 @@
 #ifndef CAUDIOLIBRARYTEST_H_INCLUDED
 #define CAUDIOLIBRARYTEST_H_INCLUDED
 
-#include "CAudioUtilities.h"
+#include "CAudioTestUtilities.h"
 
 #include "CAudioLibrary.h"
 
 #include "Wavetables.h"
 
 
-float nRevDelayBufs[14][DELAY_BUFFER_LENGTH_2];
-float prcRevDelayBufs[3][DELAY_BUFFER_LENGTH_2];
+float nRevDelayBufs[14][REV_DELAY_LENGTH];
+float prcRevDelayBufs[3][REV_DELAY_LENGTH];
+
+float testDelay[REV_DELAY_LENGTH];
 
 float sampleRate;
 
@@ -67,12 +69,15 @@ tNRev rev;
 
 tRamp ramp;
 
-#define REVERB 0
+tDelayA delay;
+
+#define REVERB 1
 #define SVF 0
 #define ONEPOLE 0
 #define ONEZERO 0
 #define TWOZERO 0
 #define TWOPOLE 0
+#define BIQUAD 0
 
 
 void init(float sampleRate)
@@ -93,6 +98,10 @@ void init(float sampleRate)
         tSawtoothInit(&saw[i], sampleRate);
         tSawtoothSetFreq(&saw[i], 100.0f * (i+1));
     }
+    
+    tRampInit(&ramp, sampleRate, 20.0f, 1);
+    
+    tDelayAInit(&delay, 40000.5f, REV_DELAY_LENGTH, testDelay);
     
     tNoiseInit(&noise, sampleRate, &randomNumberGenerator, NoiseTypeWhite);
     
@@ -124,15 +133,77 @@ void init(float sampleRate)
     tNRevInit(&rev, sampleRate, 0.0f, nRevDelayBufs);
 #endif
     
-    tRampInit(&ramp, sampleRate, 20.0f, 1);
+}
+
+// Sample-rate callback.
+float tick(float input)
+{
+    float sample    = 0.0f;
     
+    // Oscillators.
+    if (waveform == Sine)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tCycleTick(&cyc[i]);
+    }
+    else if (waveform == Triangle)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tTriangleTick(&tri[i]);
+    }
+    else if (waveform == Square)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tSquareTick(&sqr[i]);
+    }
+    else if (waveform == Sawtooth)
+    {
+        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tSawtoothTick(&saw[i]);
+    }
+    
+    sample *= 0.8f;
+ 
+
+    // Noise.
+    if (gNoiseLevel >= 0.05f)    sample += gNoiseLevel * tNoiseTick(&noise);
+    
+    // Envelope.
+    sample *= tEnvelopeTick(&env);
+    
+    sample = tDelayATick(&delay, sample);
+    
+#if REVERB
+    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
+#endif
+    
+#if SVF
+    // Lowpass.
+    sample = tSVFTick(&svf, sample);
+#endif
+    
+#if TWOZERO
+    sample = tTwoZeroTick(&twozero, sample);
+#endif
+    
+#if TWOPOLE
+    sample = tTwoPoleTick(&twopole, sample);
+#endif
+ 
+#if BIQUAD
+    sample = tBiQuadTick(&biquad, sample);
+#endif
+    
+    // Gain ramp.
+    sample *= tRampTick(&ramp);
+
+    
+    return sample;
     
 }
+
 
 void triggerEnvelope(void)
 {
     tEnvelopeOn(&env, 1.0f);
 }
+
 
 // Block-rate callback.
 void block(void)
@@ -231,7 +302,7 @@ void block(void)
     if (gSVFCutoff != val)
     {
         gSVFCutoff = val;
-    
+        
         tSVFSetFreq(&svf, 30 + gSVFCutoff * 4000);
     }
     
@@ -348,68 +419,5 @@ void block(void)
     
 }
 
-
-
-// Sample-rate callback.
-float tick(float input)
-{
-    float sample    = 0.0f;
-    
-    // Oscillators.
-    if (waveform == Sine)
-    {
-        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tCycleTick(&cyc[i]);
-    }
-    else if (waveform == Triangle)
-    {
-        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tTriangleTick(&tri[i]);
-    }
-    else if (waveform == Square)
-    {
-        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tSquareTick(&sqr[i]);
-    }
-    else if (waveform == Sawtooth)
-    {
-        for (int i = 0; i < NUM_OSC; i++)   sample += oscGain[i] * tSawtoothTick(&saw[i]);
-    }
-    
-    sample *= 0.8f;
- 
-#if 0
-    // Noise.
-    if (gNoiseLevel >= 0.5f)    sample += gNoiseLevel * tNoiseTick(&noise);
-    
-    // Envelope.
-    //sample *= tEnvelopeTick(&env);
-    
-#if REVERB
-    // Reverb.
-    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
-#endif
-    
-#if SVF
-    // Lowpass.
-    sample = tSVFTick(&svf, sample);
-#endif
-    
-#if TWOZERO
-    sample = tTwoZeroTick(&twozero, sample);
-#endif
-    
-#if TWOPOLE
-    sample = tTwoPoleTick(&twopole, sample);
-#endif
-    
-    sample = tBiQuadTick(&biquad, sample);
-    
-#endif
-    
-    // Gain ramp.
-    sample *= tRampTick(&ramp);
-
-    
-    return sample;
-    
-}
 
 #endif  // CAUDIOLIBRARYTEST_H_INCLUDED

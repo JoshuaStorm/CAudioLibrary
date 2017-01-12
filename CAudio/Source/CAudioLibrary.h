@@ -15,39 +15,39 @@
 
 #include "CAudio.h"
 
-# Basic oscillators/waveforms
-/* Aliasing phasor [0.0, 1.0) */
+#pragma Basic oscillators/waveforms
+/* tPhasor: Aliasing phasor [0.0, 1.0) */
 int      tPhasorInit(tPhasor *p, float sr);
 int      tPhasorFreq(tPhasor *p, float freq);
 float    tPhasorTick(tPhasor *p);
 
-/* Cycle/Sine waveform */
+/* tCycle: Cycle/Sine waveform */
 int      tCycleInit(tCycle *c, float sr);
 int      tCycleSetFreq(tCycle *c, float freq);
 float    tCycleTick(tCycle *c);
 
-/* Anti-aliased Sawtooth waveform*/
+/* tSawtooth: Anti-aliased Sawtooth waveform*/
 int      tSawtoothInit(tSawtooth *t, float sr);
 int      tSawtoothSetFreq(tSawtooth *s, float freq);
 float    tSawtoothTick(tSawtooth *s);
 
-/* Anti-aliased Triangle waveform */
+/* tTriangle: Anti-aliased Triangle waveform */
 int      tTriangleInit(tTriangle *t, float sr);
 int      tTriangleSetFreq(tTriangle *t, float freq);
 float    tTriangleTick(tTriangle *t);
 
-/* Anti-aliased Square waveform */
+/* tSquare: Anti-aliased Square waveform */
 int      tSquareInit  (tSquare *p, float sr);
 int      tSquareSetFreq  (tSquare *p, float freq);
 float    tSquareTick  (tSquare *p);
 
-/* Noise generator */
+/* tNoise: Noise generator */
 int      tNoiseInit      (tNoise *n, float sr, float (*randomNumberGenerator)(), NoiseType type);
 float    tNoiseTick  (tNoise *n);
 
 #pragma Filters
 
-/* OnePole filter */
+/* tOnePole: OnePole filter */
 int      tOnePoleInit           (tOnePole *f, float thePole);
 void     tOnePoleSetB0          (tOnePole *f, float b0);
 void     tOnePoleSetA1          (tOnePole *f, float a1);
@@ -125,13 +125,42 @@ int      tHighpassFreq   (tHighpass *hp, float freq);
 float    tHighpassTick   (tHighpass *hp, float x);
 
 #pragma Time-based Utilities
-/* Simple linear interpolating delay line */
-int      tDelayInit      (tDelay *d, float *buff);
-int      tDelaySetDelay  (tDelay *d, float delay);
-float    tDelayGetDelay  (tDelay *d);
-float    tDelayGetLastOut(tDelay *d);
-float    tDelayGetLastIn (tDelay *d);
-float    tDelayTick      (tDelay *d, float sample);
+/* Non-interpolating delay */
+int         tDelayInit      (tDelay *d, uint32_t delay, uint32_t maxDelay, float *buff);
+int         tDelaySetDelay  (tDelay *d, uint32_t delay);
+uint32_t    tDelayGetDelay  (tDelay *d);
+void        tDelayTapIn     (tDelay *d, float in, uint32_t tapDelay);
+float       tDelayTapOut    (tDelay *d, uint32_t tapDelay);
+float       tDelayAddTo     (tDelay *d, float value, uint32_t tapDelay);
+float       tDelayTick      (tDelay *d, float sample);
+
+float       tDelayGetLastOut(tDelay *d);
+float       tDelayGetLastIn (tDelay *d);
+
+/* Linearly-interpolating delay*/
+int         tDelayLInit      (tDelayL *d, float delay, uint32_t maxDelay, float *buff);
+int         tDelayLSetDelay  (tDelayL *d, float delay);
+uint32_t    tDelayLGetDelay  (tDelayL *d);
+void        tDelayLTapIn     (tDelayL *d, float in, uint32_t tapDelay);
+float       tDelayLTapOut    (tDelayL *d, uint32_t tapDelay);
+float       tDelayLAddTo     (tDelayL *d, float value, uint32_t tapDelay);
+float       tDelayLTick      (tDelayL *d, float sample);
+
+float       tDelayLGetLastOut(tDelayL *d);
+float       tDelayLGetLastIn (tDelayL *d);
+
+/* Allpass-interpolating delay*/
+int         tDelayAInit      (tDelayA *d, float delay, uint32_t maxDelay, float *buff);
+int         tDelayASetDelay  (tDelayA *d, float delay);
+uint32_t    tDelayAGetDelay  (tDelayA *d);
+void        tDelayATapIn     (tDelayA *d, float in, uint32_t tapDelay);
+float       tDelayATapOut    (tDelayA *d, uint32_t tapDelay);
+float       tDelayAAddTo     (tDelayA *d, float value, uint32_t tapDelay);
+float       tDelayATick      (tDelayA *d, float sample);
+
+float       tDelayAGetLastOut(tDelayA *d);
+float       tDelayAGetLastIn (tDelayA *d);
+
 
 /* Attack-Decay envelope */
 int      tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
@@ -159,13 +188,13 @@ int      tEnvelopeFollowerAttackThresh   (tEnvelopeFollower *ef, float attackThr
 float    tEnvelopeFollowerTick           (tEnvelopeFollower *ef, float x);
 
 /* PRCRev: Reverb, adapted from STK, algorithm by Perry Cook. */
-int     tPRCRevInit      (tPRCRev *r, float sr, float t60, float delayBuffers[3][DELAY_BUFFER_LENGTH_2]);
+int     tPRCRevInit      (tPRCRev *r, float sr, float t60, float delayBuffers[3][REV_DELAY_LENGTH]);
 void    tPRCRevSetT60    (tPRCRev *r, float t60);
 void    tPRCRevSetMix    (tPRCRev *r, float mix);
 float   tPRCRevTick      (tPRCRev *r, float input);
 
 /* NRev: Reverb, adpated from STK. */
-int      tNRevInit   (tNRev *r, float sr, float t60, float delayBuffers[14][DELAY_BUFFER_LENGTH_2]);
+int      tNRevInit   (tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELAY_LENGTH]);
 void     tNRevSetT60 (tNRev *r, float t60);
 void     tNRevSetMix (tNRev *r, float mix);
 float    tNRevTick   (tNRev *r, float input);

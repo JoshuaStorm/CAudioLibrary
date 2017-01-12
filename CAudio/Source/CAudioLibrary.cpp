@@ -25,12 +25,6 @@
 
 #define COMPUTE_INC() r->inc = ((r->dest-r->curr)/r->time * r->inv_sr_ms)*((float)r->samples_per_tick)
 
-
-
-float dbuf1[DELAY_BUFFER_LENGTH_2];
-float dbuf2[DELAY_BUFFER_LENGTH_2];
-float dbuf3[DELAY_BUFFER_LENGTH_2];
-
 typedef enum TableName
 {
     T20 = 0,
@@ -116,7 +110,7 @@ float   tPRCRevTick(tPRCRev *r, float input)
 }
 
 
-int     tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][DELAY_BUFFER_LENGTH_2])
+int     tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][REV_DELAY_LENGTH])
 {
     if (t60 <= 0.0) t60 = 0.001f;
     
@@ -140,13 +134,9 @@ int     tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][DELAY
         }
     }
     
-    tDelayInit(&r->allpassDelays[0], delayBuffers[0]);
-    tDelayInit(&r->allpassDelays[1], delayBuffers[1]);
-    tDelayInit(&r->combDelay, delayBuffers[2]);
-    
-    tDelaySetDelay(&r->allpassDelays[0], lengths[0]);
-    tDelaySetDelay(&r->allpassDelays[1], lengths[1]);
-    tDelaySetDelay(&r->combDelay, lengths[2]);
+    tDelayInit(&r->allpassDelays[0], lengths[0], REV_DELAY_LENGTH, delayBuffers[0]);
+    tDelayInit(&r->allpassDelays[1], lengths[1], REV_DELAY_LENGTH, delayBuffers[1]);
+    tDelayInit(&r->combDelay, lengths[2], REV_DELAY_LENGTH, delayBuffers[2]);
     
     tPRCRevSetT60(r, t60);
     r->allpassCoeff = 0.7f;
@@ -189,7 +179,7 @@ float   tNRevTick(tNRev *r, float input)
         temp = tDelayGetLastOut(&r->allpassDelays[i]);
         temp1 = r->allpassCoeff * temp;
         temp1 += temp0;
-        tDelayTick(&r->allpassDelays[i],temp1);
+        tDelayTick(&r->allpassDelays[i], temp1);
         temp0 = -(r->allpassCoeff * temp1) + temp;
     }
     
@@ -208,10 +198,10 @@ float   tNRevTick(tNRev *r, float input)
     out = r->mix * ( -( r->allpassCoeff * temp2 ) + temp );
     
     /*
-    temp = tDelayGetLastOut(&r->allpassDelays[5]);
+    temp = tDelayLGetLastOut(&r->allpassDelays[5]);
     temp3 = r->allpassCoeff * temp;
     temp3 += temp1;
-    tDelayTick(&r->allpassDelays[5], temp3 );
+    tDelayLTick(&r->allpassDelays[5], temp3 );
     lastFrame_[1] = effectMix_*( - ( r->allpassCoeff * temp3 ) + temp );
      */
     
@@ -225,7 +215,7 @@ float   tNRevTick(tNRev *r, float input)
 }
 
 
-int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][DELAY_BUFFER_LENGTH_2])
+int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELAY_LENGTH])
 {
     if (t60 <= 0.0) t60 = 0.001f;
     
@@ -249,16 +239,12 @@ int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][DELAY_BU
     
     for ( i=0; i<6; i++ )
     {
-        tDelayInit(&r->combDelays[i], delayBuffers[i]);
-        tDelaySetDelay(&r->combDelays[i], lengths[i]);
+        tDelayInit(&r->combDelays[i], lengths[i], REV_DELAY_LENGTH, delayBuffers[i]);
         r->combCoeffs[i] = pow(10.0, (-3 * lengths[i] * r->inv_sr / t60));
     }
     
     for ( i=0; i<8; i++ )
-    {
-        tDelayInit(&r->allpassDelays[i], delayBuffers[i+6]);
-        tDelaySetDelay(&r->allpassDelays[i], lengths[i+6]);
-    }
+        tDelayInit(&r->allpassDelays[i], lengths[i+6], REV_DELAY_LENGTH, delayBuffers[i+6]);
     
     for ( i=0; i<2; i++ )
     {
@@ -727,78 +713,369 @@ void    tBiQuadSetGain(tBiQuad *f, float gain)
 }
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ Delay ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int     tDelaySetDelay(tDelay *d, float delay)
+int     tDelayInit (tDelay *d, uint32_t delay, uint32_t maxDelay, float *buff)
 {
-    float outPointer;
+    if (delay > maxDelay)   d->delay = maxDelay;
+    else                    d->delay = delay;
     
-    outPointer = (float)d->in_index - delay;  // read chases write
+    d->maxDelay = maxDelay;
+    d->buff = buff;
     
-    while (outPointer < 0) {
-        outPointer += DELAY_BUFFER_SIZE; // modulo maximum length
-    }
+    d->inPoint = 0;
+    d->outPoint = 0;
     
-    d->out_index = (uint32_t) outPointer;  // integer part
-    d->bottomFrac = outPointer - (float)d->out_index; // fractional part
-    d->topFrac = 1.0f - d->bottomFrac;
+    d->lastIn = 0.0f;
+    d->lastOut = 0.0f;
     
-    d->delay = delay;
+    d->gain = 1.0f;
+    
+    tDelaySetDelay(d, d->delay);
     
     return 0;
 }
 
-float   tDelayGetDelay(tDelay *d)
+float   tDelayTick (tDelay *d, float input)
+{
+    // Input
+    d->lastIn = input;
+    d->buff[d->inPoint++] = input * d->gain;
+    if ( d->inPoint == d->maxDelay)     d->inPoint = 0;
+    
+    // Output
+    d->lastOut = d->buff[d->outPoint++];
+    if ( d->outPoint == d->maxDelay)    d->outPoint = 0;
+    
+    return d->lastOut;
+}
+
+
+int     tDelaySetDelay (tDelay *d, uint32_t delay)
+{
+    if (delay >= d->maxDelay)    d->delay = d->maxDelay;
+    else                         d->delay = delay;
+    
+    // read chases write
+    if ( d->inPoint >= delay )  d->outPoint = d->inPoint - d->delay;
+    else                        d->outPoint = d->maxDelay + d->inPoint - d->delay;
+    
+    return 0;
+}
+
+float tDelayTapOut (tDelay *d, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    return d->buff[tap];
+    
+}
+
+void tDelayTapIn (tDelay *d, float value, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    d->buff[tap] = value;
+}
+
+float tDelayAddTo (tDelay *d, float value, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    return (d->buff[tap] += value);
+}
+
+uint32_t   tDelayGetDelay (tDelay *d)
 {
     return d->delay;
 }
 
-float   tDelayGetLastOut(tDelay *d)
+float   tDelayGetLastOut (tDelay *d)
 {
     return d->lastOut;
 }
 
-float   tDelayGetLastIn(tDelay *d)
+float   tDelayGetLastIn (tDelay *d)
 {
     return d->lastIn;
 }
 
-float   tDelayTick(tDelay *d, float sample)
+void tDelaySetGain (tDelay *d, float gain)
 {
-    float output_sample;
-    d->buff[(d->in_index)] = sample;
-    d->lastIn = sample;
-    
-    /* Interpolation */
-    output_sample = d->buff[d->out_index] * d->topFrac;
-    if (d->out_index+1 < DELAY_BUFFER_SIZE)
-        output_sample += d->buff[d->out_index+1] * d->bottomFrac;
-    else
-        output_sample += d->buff[0] * d->bottomFrac;
-    
-    // Increment pointers.
-    d->in_index = d->in_index + 1;
-    d->out_index = d->out_index  +1;
-    if (d->in_index == DELAY_BUFFER_SIZE) d->in_index -= DELAY_BUFFER_SIZE;
-    if (d->out_index >= DELAY_BUFFER_SIZE) d->out_index -= DELAY_BUFFER_SIZE;
-    
-    d->lastOut = output_sample;
-    
-    return output_sample;
+    if (gain < 0.0f)    d->gain = 0.0f;
+    else                d->gain = gain;
 }
 
-
-/* Delay */
-int     tDelayInit(tDelay *d, float *buff)
+float tDelayGetGain (tDelay *d)
 {
-    d->buff = buff;
-    d->bottomFrac = 0.0f;
-    d->topFrac = 0.0f;
-    d->in_index = 0;
-    d->out_index = 0;
+    return d->gain;
+}
+
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ DelayL ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+int     tDelayLInit (tDelayL *d, float delay, uint32_t maxDelay, float *buff)
+{
+    d->gain = 1.0f;
+    
     d->lastIn = 0.0f;
     d->lastOut = 0.0f;
-    d->delay = 0.001f;
+    
+    if (delay < 0.0f)           d->delay = 0.0f;
+    else if (delay <= maxDelay) d->delay = delay;
+    else                        d->delay = maxDelay;
+    
+    d->maxDelay = maxDelay;
+    d->buff = buff;
+    
+    d->inPoint = 0;
+    d->outPoint = 0;
+    
+    tDelayLSetDelay(d, d->delay);
     
     return 0;
+}
+
+float   tDelayLTick (tDelayL *d, float input)
+{
+    d->buff[d->inPoint++] = input * d->gain;
+    
+    // Increment input pointer modulo length.
+    if ( d->inPoint == d->maxDelay )    d->inPoint = 0;
+
+    
+    // First 1/2 of interpolation
+    d->lastOut = d->buff[d->outPoint] * d->omAlpha;
+    
+    // Second 1/2 of interpolation
+    if (d->outPoint + 1 < d->maxDelay)
+        d->lastOut += d->buff[d->outPoint+1] * d->alpha;
+    else
+        d->lastOut += d->buff[0] * d->alpha;
+    
+    // Increment output pointer modulo length.
+    if ( ++(d->outPoint) == d->maxDelay )   d->outPoint = 0;
+    
+    return d->lastOut;
+}
+
+int     tDelayLSetDelay (tDelayL *d, float delay)
+{
+    if (delay < 0.0f)               d->delay = 0.0f;
+    else if (delay <= d->maxDelay)  d->delay = d->delay;
+    else                            d->delay = d->maxDelay;
+    
+    float outPointer = d->inPoint - d->delay;
+    
+    while ( outPointer < 0 )
+        outPointer += d->maxDelay; // modulo maximum length
+    
+    d->outPoint = (uint32_t) outPointer;   // integer part
+    
+    d->alpha = outPointer - d->outPoint; // fractional part
+    d->omAlpha = 1.0f - d->alpha;
+    
+    if ( d->outPoint == d->maxDelay ) d->outPoint = 0;
+    
+    return 0;
+}
+
+float tDelayLTapOut (tDelayL *d, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    return d->buff[tap];
+    
+}
+
+void tDelayLTapIn (tDelayL *d, float value, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    d->buff[tap] = value;
+}
+
+float tDelayLAddTo (tDelayL *d, float value, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    return (d->buff[tap] += value);
+}
+
+uint32_t   tDelayLGetDelay (tDelayL *d)
+{
+    return d->delay;
+}
+
+float   tDelayLGetLastOut (tDelayL *d)
+{
+    return d->lastOut;
+}
+
+float   tDelayLGetLastIn (tDelayL *d)
+{
+    return d->lastIn;
+}
+
+void tDelayLSetGain (tDelayL *d, float gain)
+{
+    if (gain < 0.0f)    d->gain = 0.0f;
+    else                d->gain = gain;
+}
+
+float tDelayLGetGain (tDelayL *d)
+{
+    return d->gain;
+}
+
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ DelayA ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+int     tDelayAInit (tDelayA *d, float delay, uint32_t maxDelay, float *buff)
+{
+    d->gain = 1.0f;
+    
+    d->lastIn = 0.0f;
+    d->lastOut = 0.0f;
+    
+    if (delay < 0.5f)           d->delay = 0.5f;
+    else if (delay <= maxDelay) d->delay = delay;
+    else                        d->delay = maxDelay;
+    
+    d->maxDelay = maxDelay;
+    d->buff = buff;
+    
+    d->inPoint = 0;
+    d->outPoint = 0;
+    
+    tDelayASetDelay(d, d->delay);
+    
+    d->apInput = 0.0f;
+    
+    return 0;
+}
+
+float   tDelayATick (tDelayA *d, float input)
+{
+    d->buff[d->inPoint++] = input * d->gain;
+    
+    // Increment input pointer modulo length.
+    if ( d->inPoint == d->maxDelay )    d->inPoint = 0;
+    
+    // Do allpass interpolation delay.
+    d->lastOut *= -d->coeff;
+    d->lastOut += d->apInput + ( d->coeff * d->buff[d->outPoint] );
+    
+    // Save allpass input
+    d->apInput = d->buff[d->outPoint];
+    
+    // Increment output pointer modulo length.
+    if ( ++(d->outPoint) == d->maxDelay )   d->outPoint = 0;
+    
+    return d->lastOut;
+}
+
+int     tDelayASetDelay (tDelayA *d, float delay)
+{
+    if (delay < 0.5f)               d->delay = 0.5f;
+    else if (delay <= d->maxDelay)  d->delay = d->delay;
+    else                            d->delay = d->maxDelay;
+    
+     // outPoint chases inPoint
+    float outPointer = d->inPoint - d->delay + 1.0;
+    
+    while ( outPointer < 0 )    outPointer += d->maxDelay;  // mod max length
+    
+    d->outPoint = (uint32_t) outPointer;         // integer part
+    
+    if ( d->outPoint == d->maxDelay )   d->outPoint = 0;
+    
+    d->alpha = 1.0f + d->outPoint - outPointer; // fractional part
+    
+    if ( d->alpha < 0.5f )
+    {
+        // The optimal range for alpha is about 0.5 - 1.5 in order to
+        // achieve the flattest phase delay response.
+        
+        d->outPoint += 1;
+        
+        if ( d->outPoint >= d->maxDelay ) d->outPoint -= d->maxDelay;
+        
+        d->alpha += 1.0f;
+    }
+    
+    d->coeff = (1.0f - d->alpha) / (1.0f + d->alpha);  // coefficient for allpass
+    
+    return 0;
+}
+
+float tDelayATapOut (tDelayA *d, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    return d->buff[tap];
+    
+}
+
+void tDelayATapIn (tDelayA *d, float value, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    d->buff[tap] = value;
+}
+
+float tDelayAAddTo (tDelayA *d, float value, uint32_t tapDelay)
+{
+    int32_t tap = d->inPoint - tapDelay - 1;
+    
+    // Check for wraparound.
+    while ( tap < 0 )   tap += d->maxDelay;
+    
+    return (d->buff[tap] += value);
+}
+
+uint32_t   tDelayAGetDelay (tDelayA *d)
+{
+    return d->delay;
+}
+
+float   tDelayAGetLastOut (tDelayA *d)
+{
+    return d->lastOut;
+}
+
+float   tDelayAGetLastIn (tDelayA *d)
+{
+    return d->lastIn;
+}
+
+void tDelayASetGain (tDelayA *d, float gain)
+{
+    if (gain < 0.0f)    d->gain = 0.0f;
+    else                d->gain = gain;
+}
+
+float tDelayAGetGain (tDelayA *d)
+{
+    return d->gain;
 }
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ Envelope ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
