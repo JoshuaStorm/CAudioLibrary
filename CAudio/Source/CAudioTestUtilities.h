@@ -17,10 +17,10 @@
 
 static const std::vector<std::string> cSliderNames =
 {
-    "OscPitch",
-    "Noise",
-    "Attack",
-    "Decay",
+    "SK Freq",
+    "SK Damping",
+    "SK Detune",
+    "SK PickPos",
     "Reverb Mix",
     "Reverb Time",
     "Gain"

@@ -67,13 +67,15 @@ void     tTwoPoleSetGain        (tTwoPole *f, float gain);
 float    tTwoPoleTick           (tTwoPole *f, float input);
 
 /* OneZero filter */
-int      tOneZeroInit(tOneZero *f, float theZero);
+int      tOneZeroInit(tOneZero *f, float theZero, float sr);
 void     tOneZeroSetB0(tOneZero *f, float b0);
 void     tOneZeroSetB1(tOneZero *f, float b1);
 void     tOneZeroSetZero(tOneZero *f, float theZero);
 void     tOneZeroSetCoefficients(tOneZero *f, float b0, float b1);
 void     tOneZeroSetGain(tOneZero *f, float gain);
 float    tOneZeroTick(tOneZero *f, float input);
+
+float    tOneZeroGetPhaseDelay(tOneZero *f, float frequency ); // CAN / SHOULD MAKE GENERIC VERSION OF THIS FUNCTION FOR ALL FILTERS. ALL FILTERS SHOULD HAVE FIXED SIZE ARRAY OF As and Bs. Pass these arays to function. As/Bs not used are -1 in arrays.
 
 /* TwoZero filter */
 int      tTwoZeroInit           (tTwoZero *f, float sampleRate);
@@ -140,7 +142,7 @@ float       tDelayGetLastIn (tDelay *d);
 /* Linearly-interpolating delay*/
 int         tDelayLInit      (tDelayL *d, float delay, uint32_t maxDelay, float *buff);
 int         tDelayLSetDelay  (tDelayL *d, float delay);
-uint32_t    tDelayLGetDelay  (tDelayL *d);
+float       tDelayLGetDelay  (tDelayL *d);
 void        tDelayLTapIn     (tDelayL *d, float in, uint32_t tapDelay);
 float       tDelayLTapOut    (tDelayL *d, uint32_t tapDelay);
 float       tDelayLAddTo     (tDelayL *d, float value, uint32_t tapDelay);
@@ -152,7 +154,7 @@ float       tDelayLGetLastIn (tDelayL *d);
 /* Allpass-interpolating delay*/
 int         tDelayAInit      (tDelayA *d, float delay, uint32_t maxDelay, float *buff);
 int         tDelayASetDelay  (tDelayA *d, float delay);
-uint32_t    tDelayAGetDelay  (tDelayA *d);
+float       tDelayAGetDelay  (tDelayA *d);
 void        tDelayATapIn     (tDelayA *d, float in, uint32_t tapDelay);
 float       tDelayATapOut    (tDelayA *d, uint32_t tapDelay);
 float       tDelayAAddTo     (tDelayA *d, float value, uint32_t tapDelay);
@@ -198,6 +200,39 @@ int      tNRevInit   (tNRev *r, float sr, float t60, float delayBuffers[14][REV_
 void     tNRevSetT60 (tNRev *r, float t60);
 void     tNRevSetMix (tNRev *r, float mix);
 float    tNRevTick   (tNRev *r, float input);
+
+#pragma Physical Models
+
+/* tPluck */
+int     tPluckInit          (tPluck *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[REV_DELAY_LENGTH]);
+float   tPluckTick          (tPluck *p);
+void    tPluckPluck         (tPluck *p, float amplitude);
+void    tPluckNoteOn        (tPluck *p, float frequency, float amplitude ); // Start a note with the given frequency and amplitude.;
+void    tPluckNoteOff       (tPluck *p, float amplitude ); // Stop a note with the given amplitude (speed of decay).
+void    tPluckSetFrequency  (tPluck *p, float frequency ); // Set instrument parameters for a particular frequency.
+void    tPluckControlChange (tPluck *p, int number, float value); // Perform the control change specified by \e number and \e value (0.0 - 128.0).
+float   tPluckGetLastOut    (tPluck *p);
+
+/* tStifKarp */
+typedef enum SKControlType
+{
+    SKPickPosition = 0,
+    SKStringDamping,
+    SKDetune,
+    SKControlTypeNil
+} SKControlType;
+
+int     tStifKarpInit               (tStifKarp *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[2][REV_DELAY_LENGTH]);
+float   tStifKarpTick               (tStifKarp *p);
+void    tStifKarpPluck              (tStifKarp *p, float amplitude);
+void    tStifKarpNoteOn             (tStifKarp *p, float frequency, float amplitude ); // Start a note with the given frequency and amplitude.;
+void    tStifKarpNoteOff            (tStifKarp *p, float amplitude ); // Stop a note with the given amplitude (speed of decay).
+void    tStifKarpSetFrequency       (tStifKarp *p, float frequency ); // Set instrument parameters for a particular frequency.
+void    tStifKarpControlChange      (tStifKarp *p, SKControlType type, float value); // Perform the control change specified by \e number and \e value (0.0 - 128.0).
+void    tStifKarpSetStretch         (tStifKarp *p, float stretch );//! Set the stretch "factor" of the string (0.0 - 1.0).
+void    tStifKarpSetPickupPosition  (tStifKarp *p, float position ); //! Set the pluck or "excitation" position along the string (0.0 - 1.0).
+void    tStifKarpSetBaseLoopGain    (tStifKarp *p, float aGain ); //! Set the base loop gain.
+float   tStifKarpGetLastOut         (tStifKarp *p);
 
 
 #endif  // CAUDIOLIBRARY_H_INCLUDED

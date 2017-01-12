@@ -21,7 +21,7 @@
 float nRevDelayBufs[14][REV_DELAY_LENGTH];
 float prcRevDelayBufs[3][REV_DELAY_LENGTH];
 
-float testDelay[REV_DELAY_LENGTH];
+float skBuff[2][REV_DELAY_LENGTH];
 
 float sampleRate;
 
@@ -39,7 +39,7 @@ float gBiQuadNotchFreq, gBiQuadNotchRadius;
 float gBiQuadResFreq, gBiQuadResRadius;
 bool  gTrigger;
 float gRevTime,gRevMix;
-
+float gSKFreq, gSKDamping, gSKPickPos, gSKDetune;
 WaveformType waveform = Sine;
 
 
@@ -69,7 +69,7 @@ tNRev rev;
 
 tRamp ramp;
 
-tDelayA delay;
+tStifKarp pluck;
 
 #define REVERB 1
 #define SVF 0
@@ -78,6 +78,8 @@ tDelayA delay;
 #define TWOZERO 0
 #define TWOPOLE 0
 #define BIQUAD 0
+
+#define BLOCK 0
 
 
 void init(float sampleRate)
@@ -101,11 +103,11 @@ void init(float sampleRate)
     
     tRampInit(&ramp, sampleRate, 20.0f, 1);
     
-    tDelayAInit(&delay, 40000.5f, REV_DELAY_LENGTH, testDelay);
-    
     tNoiseInit(&noise, sampleRate, &randomNumberGenerator, NoiseTypeWhite);
     
     tEnvelopeInit(&env, sampleRate, 2.0f, 500.0f, 0, exp_decay, attack_decay_inc);
+    
+    tStifKarpInit(&pluck, sampleRate, 20.0f, &randomNumberGenerator, skBuff);
 
 #if SVF
     tSVFInit(&svf, sampleRate, SVFTypeLowpass, 2000, 1.0f);
@@ -135,11 +137,21 @@ void init(float sampleRate)
     
 }
 
+int count;
+
 // Sample-rate callback.
 float tick(float input)
 {
     float sample    = 0.0f;
     
+    sample = tStifKarpTick(&pluck);
+    
+#if REVERB
+    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
+#endif
+    
+    
+#if BLOCK
     // Oscillators.
     if (waveform == Sine)
     {
@@ -167,12 +179,6 @@ float tick(float input)
     // Envelope.
     sample *= tEnvelopeTick(&env);
     
-    sample = tDelayATick(&delay, sample);
-    
-#if REVERB
-    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
-#endif
-    
 #if SVF
     // Lowpass.
     sample = tSVFTick(&svf, sample);
@@ -190,10 +196,11 @@ float tick(float input)
     sample = tBiQuadTick(&biquad, sample);
 #endif
     
+#endif
+
     // Gain ramp.
     sample *= tRampTick(&ramp);
 
-    
     return sample;
     
 }
@@ -202,6 +209,9 @@ float tick(float input)
 void triggerEnvelope(void)
 {
     tEnvelopeOn(&env, 1.0f);
+    
+    tStifKarpPluck(&pluck, 0.9f);
+    
 }
 
 
@@ -210,6 +220,81 @@ void block(void)
 {
     float val = 0.0f;
     
+    val = getSliderValue("SK Freq");
+    
+    if (gSKFreq != val)
+    {
+        gSKFreq = val;
+        
+        tStifKarpSetFrequency(&pluck, 10.0f + 2000.0f * gSKFreq);
+        
+    }
+    
+    val = getSliderValue("SK Damping");
+    
+    if (gSKDamping != val)
+    {
+        gSKDamping = val;
+        
+        tStifKarpControlChange(&pluck, SKStringDamping, gSKDamping * 128.0f);
+    }
+    
+    val = getSliderValue("SK Detune");
+    
+    if (gSKDetune != val)
+    {
+        gSKDetune = val;
+        
+        tStifKarpControlChange(&pluck, SKDetune, gSKDetune * 128.0f);
+    }
+    
+    val = getSliderValue("SK PickPos");
+    
+    if (gSKPickPos != val)
+    {
+        gSKPickPos = val;
+        
+        tStifKarpControlChange(&pluck, SKPickPosition, gSKPickPos * 128.0f);
+    }
+    
+#if REVERB
+    val = getSliderValue("Reverb Time");
+    
+    if (gRevTime != val)
+    {
+        gRevTime = val;
+        
+        tNRevSetT60(&rev, gRevTime * 20.0f);
+    }
+    
+    val = getSliderValue("Reverb Mix");
+    
+    if (gRevMix != val)
+    {
+        gRevMix = val;
+        
+        tNRevSetMix(&rev, gRevMix);
+        
+        tNRevSetMix(&rev, gRevMix);
+    }
+#endif
+    
+    // Trigger
+    gTrigger = getButtonState("Tap");
+    
+    if (gTrigger)
+    {
+        setButtonState("Tap", false);
+        triggerEnvelope();
+    }
+    
+    // Gain
+    gGain = getSliderValue("Gain");
+    
+    tRampSetDest(&ramp, gGain);
+    
+    
+#if BLOCK
     // Envelope
     val = getSliderValue("Attack");
     if (gAttack != val)
@@ -225,20 +310,6 @@ void block(void)
         float temp =  2.0f + 2000.0f * gDecay;
         tEnvelopeDecay(&env, 2.0f + 2000.0f * gDecay);
     }
-    
-    // Trigger
-    gTrigger = getButtonState("Tap");
-    
-    if (gTrigger)
-    {
-        setButtonState("Tap", false);
-        triggerEnvelope();
-    }
-    
-    // Gain
-    gGain = getSliderValue("Gain");
-    
-    tRampSetDest(&ramp, gGain);
     
     // Noise
     gNoiseLevel = getSliderValue("Noise");
@@ -384,28 +455,8 @@ void block(void)
         
         tBiQuadSetResonance(&biquad, gBiQuadResFreq * 10000.0f, gBiQuadResRadius, 0);
     }
-    
-#if REVERB
-    val = getSliderValue("Reverb Time");
-    
-    if (gRevTime != val)
-    {
-        gRevTime = val;
-        
-        tNRevSetT60(&rev, gRevTime * 20.0f);
-    }
-    
-    val = getSliderValue("Reverb Mix");
-    
-    if (gRevMix != val)
-    {
-        gRevMix = val;
-        
-        tNRevSetMix(&rev, gRevMix);
-        
-        tNRevSetMix(&rev, gRevMix);
-    }
-#endif
+
+
     
     WaveformType state = (WaveformType) getComboBoxState("Waveform");
     
@@ -415,6 +466,8 @@ void block(void)
         
         DBG("waveform: " + cWaveformType[waveform]);
     }
+    
+#endif
     
     
 }

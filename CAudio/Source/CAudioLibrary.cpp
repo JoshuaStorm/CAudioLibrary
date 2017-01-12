@@ -261,8 +261,9 @@ int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELA
 
 #pragma mark - Filters
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OneZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int     tOneZeroInit(tOneZero *f, float theZero)
+int     tOneZeroInit(tOneZero *f, float theZero, float sr)
 {
+    f->sr = sr;
     f->gain = 1.0f;
     f->lastIn = 0.0f;
     f->lastOut = 0.0f;
@@ -310,6 +311,33 @@ void    tOneZeroSetGain(tOneZero *f, float gain)
 {
     f->gain = gain;
 }
+
+float   tOneZeroGetPhaseDelay(tOneZero *f, float frequency )
+{
+    if ( frequency <= 0.0) frequency = 0.05f;
+    
+    float omegaT = 2 * PI * frequency / f->sr;
+    float real = 0.0, imag = 0.0;
+    
+    real += f->b0;
+    
+    real += f->b1 * cosf(omegaT);
+    imag -= f->b1 * sinf(omegaT);
+
+    real *= f->gain;
+    imag *= f->gain;
+    
+    float phase = atan2f( imag, real );
+    
+    real = 0.0, imag = 0.0;
+    
+    phase -= atan2f( imag, real );
+    
+    phase = fmodf( -phase, 2 * PI );
+    
+    return phase / omegaT;
+}
+
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OneZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
 int     tTwoZeroInit(tTwoZero *f, float sr)
@@ -867,7 +895,7 @@ float   tDelayLTick (tDelayL *d, float input)
 int     tDelayLSetDelay (tDelayL *d, float delay)
 {
     if (delay < 0.0f)               d->delay = 0.0f;
-    else if (delay <= d->maxDelay)  d->delay = d->delay;
+    else if (delay <= d->maxDelay)  d->delay = delay;
     else                            d->delay = d->maxDelay;
     
     float outPointer = d->inPoint - d->delay;
@@ -916,7 +944,7 @@ float tDelayLAddTo (tDelayL *d, float value, uint32_t tapDelay)
     return (d->buff[tap] += value);
 }
 
-uint32_t   tDelayLGetDelay (tDelayL *d)
+float   tDelayLGetDelay (tDelayL *d)
 {
     return d->delay;
 }
@@ -972,17 +1000,18 @@ float   tDelayATick (tDelayA *d, float input)
     d->buff[d->inPoint++] = input * d->gain;
     
     // Increment input pointer modulo length.
-    if ( d->inPoint == d->maxDelay )    d->inPoint = 0;
+    if ( d->inPoint >= d->maxDelay )    d->inPoint = 0;
     
     // Do allpass interpolation delay.
-    d->lastOut *= -d->coeff;
-    d->lastOut += d->apInput + ( d->coeff * d->buff[d->outPoint] );
+    float out = d->lastOut * -d->coeff;
+    out += d->apInput + ( d->coeff * d->buff[d->outPoint] );
+    d->lastOut = out;
     
     // Save allpass input
-    d->apInput = d->buff[d->outPoint];
+    d->apInput = d->buff[d->outPoint++];
     
     // Increment output pointer modulo length.
-    if ( ++(d->outPoint) == d->maxDelay )   d->outPoint = 0;
+    if (d->outPoint >= d->maxDelay )   d->outPoint = 0;
     
     return d->lastOut;
 }
@@ -990,19 +1019,19 @@ float   tDelayATick (tDelayA *d, float input)
 int     tDelayASetDelay (tDelayA *d, float delay)
 {
     if (delay < 0.5f)               d->delay = 0.5f;
-    else if (delay <= d->maxDelay)  d->delay = d->delay;
+    else if (delay <= d->maxDelay)  d->delay = delay;
     else                            d->delay = d->maxDelay;
     
      // outPoint chases inPoint
-    float outPointer = d->inPoint - d->delay + 1.0;
+    float outPointer = (float)d->inPoint - d->delay + 1.0f;
     
     while ( outPointer < 0 )    outPointer += d->maxDelay;  // mod max length
     
     d->outPoint = (uint32_t) outPointer;         // integer part
     
-    if ( d->outPoint == d->maxDelay )   d->outPoint = 0;
+    if ( d->outPoint >= d->maxDelay )   d->outPoint = 0;
     
-    d->alpha = 1.0f + d->outPoint - outPointer; // fractional part
+    d->alpha = 1.0f + (float)d->outPoint - outPointer; // fractional part
     
     if ( d->alpha < 0.5f )
     {
@@ -1052,7 +1081,7 @@ float tDelayAAddTo (tDelayA *d, float value, uint32_t tapDelay)
     return (d->buff[tap] += value);
 }
 
-uint32_t   tDelayAGetDelay (tDelayA *d)
+float   tDelayAGetDelay (tDelayA *d)
 {
     return d->delay;
 }
@@ -1911,3 +1940,256 @@ int     tRampInit(tRamp *r, float sr, float time, int samples_per_tick)
     COMPUTE_INC();
     return 0;
 }
+
+#pragma Physical Models
+/* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ tPluck ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
+int     tPluckInit          (tPluck *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[REV_DELAY_LENGTH])
+{
+    if ( lowestFrequency <= 0.0f )  lowestFrequency = 10.0f;
+    
+    p->sr = sr;
+    
+   // uint32_t delays = (uint32_t) ( sr / lowestFrequency );
+    
+    tNoiseInit(&p->noise, sr, randomNumberGenerator, NoiseTypeWhite);
+    tOnePoleInit(&p->pickFilter, 0.0f);
+    tOneZeroInit(&p->loopFilter, 0.0f, sr);
+    
+    
+    tDelayAInit(&p->delayLine, 0.0f, REV_DELAY_LENGTH, delayBuff);
+    
+    tPluckSetFrequency(p, 220.0f);
+}
+
+float   tPluckGetLastOut    (tPluck *p)
+{
+    return p->lastOut;
+}
+
+float   tPluckTick          (tPluck *p)
+{
+    return (p->lastOut = 3.0f * tDelayATick(&p->delayLine, tOneZeroTick(&p->loopFilter, tDelayAGetLastOut(&p->delayLine) * p->loopGain ) ));
+}
+
+void    tPluckPluck         (tPluck *p, float amplitude)
+{
+    if ( amplitude < 0.0f)      amplitude = 0.0f;
+    else if (amplitude > 1.0f)  amplitude = 1.0f;
+    
+    tOnePoleSetPole(&p->pickFilter, 0.999f - (amplitude * 0.15));
+    tOnePoleSetGain(&p->pickFilter, amplitude * 0.5f );
+    
+    // Fill delay with noise additively with current contents.
+    for ( uint32_t i = 0; i < (uint32_t)tDelayAGetDelay(&p->delayLine); i++ )
+        tDelayATick(&p->delayLine, 0.6f * tDelayAGetLastOut(&p->delayLine) + tOnePoleTick(&p->pickFilter, tNoiseTick(&p->noise) ) );
+}
+
+// Start a note with the given frequency and amplitude.;
+void    tPluckNoteOn        (tPluck *p, float frequency, float amplitude )
+{
+    tPluckSetFrequency( p, frequency );
+    tPluckPluck( p, amplitude );
+}
+
+// Stop a note with the given amplitude (speed of decay).
+void    tPluckNoteOff       (tPluck *p, float amplitude )
+{
+    if ( amplitude < 0.0f)      amplitude = 0.0f;
+    else if (amplitude > 1.0f)  amplitude = 1.0f;
+    
+    p->loopGain = 1.0f - amplitude;
+}
+
+// Set instrument parameters for a particular frequency.
+void    tPluckSetFrequency  (tPluck *p, float frequency )
+{
+    if ( frequency <= 0.0f )   frequency = 0.001f;
+    
+    // Delay = length - filter delay.
+    float delay = ( p->sr / frequency ) - tOneZeroGetPhaseDelay(&p->loopFilter, frequency );
+    
+    tDelayASetDelay(&p->delayLine, delay );
+    
+    p->loopGain = 0.99f + (frequency * 0.000005f);
+    
+    if ( p->loopGain >= 0.999f ) p->loopGain = 0.999f;
+
+}
+
+// Perform the control change specified by \e number and \e value (0.0 - 128.0).
+void    tPluckControlChange (tPluck *p, int number, float value)
+{
+    return;
+}
+/* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
+
+/* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ tStifKarp ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
+int     tStifKarpInit          (tStifKarp *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[2][REV_DELAY_LENGTH])
+{
+    if ( lowestFrequency <= 0.0f )  lowestFrequency = 8.0f;
+    
+    p->sr = sr;
+    
+    tDelayAInit(&p->delayLine, 0.0f, REV_DELAY_LENGTH, delayBuff[0]);
+    tDelayLInit(&p->combDelay, 0.0f, REV_DELAY_LENGTH, delayBuff[1]);
+    
+    tOneZeroInit(&p->filter, 0.0f, sr);
+    
+    tNoiseInit(&p->noise, sr, randomNumberGenerator, NoiseTypeWhite);
+    
+    for (int i = 0; i < 4; i++)
+    {
+        tBiQuadInit(&p->biquad[i], sr);
+    }
+    
+    p->pluckAmplitude = 0.3f;
+    p->pickupPosition = 0.4f;
+    
+    p->stretching = 0.9999f;
+    p->baseLoopGain = 0.995f;
+    p->loopGain = 0.999f;
+
+    tStifKarpSetFrequency( p, 220.0f );
+    return 0;
+}
+
+float   tStifKarpGetLastOut    (tStifKarp *p)
+{
+    return p->lastOut;
+}
+
+int mycount;
+float   tStifKarpTick          (tStifKarp *p)
+{
+    float temp = tDelayAGetLastOut(&p->delayLine) * p->loopGain;
+    
+    // Calculate allpass stretching.
+    for (int i=0; i<4; i++)     temp = tBiQuadTick(&p->biquad[i],temp);
+    
+    // Moving average filter.
+    temp = tOneZeroTick(&p->filter, temp);
+    
+    float out = tDelayATick(&p->delayLine, temp);
+    out = out - tDelayLTick(&p->combDelay, out);
+    p->lastOut = out;
+    
+    return p->lastOut;
+}
+
+void    tStifKarpPluck         (tStifKarp *p, float amplitude)
+{
+    if ( amplitude < 0.0f)      amplitude = 0.0f;
+    else if (amplitude > 1.0f)  amplitude = 1.0f;
+    
+    p->pluckAmplitude = amplitude;
+    
+    for ( uint32_t i=0; i < (uint32_t)tDelayAGetDelay(&p->delayLine); i++ )
+    {
+        // Fill delay with noise additively with current contents.
+        tDelayATick(&p->delayLine, (tDelayAGetLastOut(&p->delayLine) * 0.6f) + 0.4f * tNoiseTick(&p->noise) * p->pluckAmplitude );
+        //delayLine_.tick( combDelay_.tick((delayLine_.lastOut() * 0.6) + 0.4 * noise->tick() * pluckAmplitude_) );
+    }
+}
+
+// Start a note with the given frequency and amplitude.;
+void    tStifKarpNoteOn        (tStifKarp *p, float frequency, float amplitude )
+{
+    tStifKarpSetFrequency( p, frequency );
+    tStifKarpPluck( p, amplitude );
+}
+
+// Stop a note with the given amplitude (speed of decay).
+void    tStifKarpNoteOff       (tStifKarp *p, float amplitude )
+{
+    if ( amplitude < 0.0f)      amplitude = 0.0f;
+    else if (amplitude > 1.0f)  amplitude = 1.0f;
+    
+    p->loopGain = 1.0f - amplitude;
+}
+
+// Set instrument parameters for a particular frequency.
+void    tStifKarpSetFrequency  (tStifKarp *p, float frequency )
+{
+    if ( frequency <= 0.0f )   frequency = 0.001f;
+    
+    p->lastFrequency = frequency;
+    p->lastLength = p->sr / p->lastFrequency;
+    float delay = p->lastLength - 0.5f;
+    tDelayASetDelay(&p->delayLine, delay );
+    
+    // MAYBE MODIFY LOOP GAINS
+    p->loopGain = p->baseLoopGain + (frequency * 0.000005f);
+    if (p->loopGain >= 1.0f) p->loopGain = 0.99999f;
+    
+    tStifKarpSetStretch(p, p->stretching);
+    
+    tDelayLSetDelay(&p->combDelay, 0.5f * p->pickupPosition * p->lastLength );
+    
+    DBG("loopGain: " + String(p->loopGain));
+    DBG("combDelay: " + String( 0.5f * p->pickupPosition * p->lastLength));
+    DBG("lastLength: " + String(p->lastLength));
+    DBG("lastFreq: " + String( p->lastFrequency));
+    DBG("delayLine: " + String(delay));
+    
+}
+
+//! Set the stretch "factor" of the string (0.0 - 1.0).
+void    tStifKarpSetStretch         (tStifKarp *p, float stretch )
+{
+    p->stretching = stretch;
+    float coefficient;
+    float freq = p->lastFrequency * 2.0f;
+    float dFreq = ( (0.5f * p->sr) - freq ) * 0.25f;
+    float temp = 0.5f + (stretch * 0.5f);
+    if ( temp > 0.9999f ) temp = 0.9999f;
+    
+    for ( int i=0; i<4; i++ )
+    {
+        coefficient = temp * temp;
+        tBiQuadSetA2(&p->biquad[i], coefficient);
+        tBiQuadSetB0(&p->biquad[i], coefficient);
+        tBiQuadSetB2(&p->biquad[i], 1.0f);
+        
+        coefficient = -2.0f * temp * cos(TWO_PI * freq / p->sr);
+        tBiQuadSetA1(&p->biquad[i], coefficient);
+        tBiQuadSetB1(&p->biquad[i], coefficient);
+        
+        freq += dFreq;
+    }
+}
+
+//! Set the pluck or "excitation" position along the string (0.0 - 1.0).
+void    tStifKarpSetPickupPosition  (tStifKarp *p, float position )
+{
+    if (position < 0.0f)        p->pickupPosition = 0.0f;
+    else if (position <= 1.0f)  p->pickupPosition = position;
+    else                        p->pickupPosition = 1.0f;
+
+    tDelayLSetDelay(&p->combDelay, 0.5f * p->pickupPosition * p->lastLength);
+}
+
+//! Set the base loop gain.
+void    tStifKarpSetBaseLoopGain    (tStifKarp *p, float aGain )
+{
+    p->baseLoopGain = aGain;
+    p->loopGain = p->baseLoopGain + (p->lastFrequency * 0.000005f);
+    if ( p->loopGain > 0.99999f ) p->loopGain = 0.99999f;
+}
+
+// Perform the control change specified by \e number and \e value (0.0 - 128.0).
+void    tStifKarpControlChange (tStifKarp *p, SKControlType type, float value)
+{
+    if ( value < 0.0f )         value = 0.0f;
+    else if (value > 128.0f)   value = 128.0f;
+
+    float normalizedValue = value * ONE_OVER_128;
+    
+    if (type == SKPickPosition) // 4
+        tStifKarpSetPickupPosition( p, normalizedValue );
+    else if (type == SKStringDamping) // 11
+        tStifKarpSetBaseLoopGain( p, 0.97f + (normalizedValue * 0.03f) );
+    else if (type == SKDetune) // 1
+        tStifKarpSetStretch( p, 0.91f + (0.09f * (1.0f - normalizedValue)) );
+
+}
+/* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */

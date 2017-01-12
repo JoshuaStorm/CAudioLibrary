@@ -24,6 +24,8 @@
 #define PI 3.14159265358979
 #define TWO_PI (2 * PI)
 
+#define ONE_OVER_128 1.0f / 128.0f
+
 #pragma Oscillators
 // Phasor: basic aliasing phasor
 typedef struct _tPhasor
@@ -121,7 +123,7 @@ typedef struct _tOneZero
 {
     float gain;
     float b0,b1;
-    
+    float sr;
     float lastIn, lastOut;
     
 } tOneZero;
@@ -298,10 +300,44 @@ typedef struct _tADSR
 
 #pragma Physical Models
 
-typedef struct _tStifKarplusStrong
+/* Karplus Strong model */
+typedef struct _tPluck
 {
+    tDelayA     delayLine; // Allpass or Linear??  big difference...
+    tOneZero    loopFilter;
+    tOnePole    pickFilter;
+    tNoise      noise;
     
-}tStifKarplusStrong;
+    float lastOut;
+    float loopGain;
+    
+    float sr;
+    
+} tPluck;
+
+/* Stif Karplus Strong model */
+typedef struct _tStifKarp
+{
+    tDelayA  delayLine;
+    tDelayL  combDelay;
+    tOneZero filter;
+    tNoise   noise;
+    tBiQuad  biquad[4];
+    
+    uint32_t length;
+    float loopGain;
+    float baseLoopGain;
+    float lastFrequency;
+    float lastLength;
+    float stretching;
+    float pluckAmplitude;
+    float pickupPosition;
+    
+    float lastOut;
+    
+    float sr;
+    
+} tStifKarp;
 
 #pragma Complex/Miscellaneous/Other
 // Envelope Follower
