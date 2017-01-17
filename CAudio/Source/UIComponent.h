@@ -11,9 +11,9 @@
 #ifndef UICOMPONENT_H_INCLUDED
 #define UICOMPONENT_H_INCLUDED
 
-#include "CAudioTestUtilities.h"
+#include "CAudioLink.h"
 
-#include "CAudioLibraryTest.h"
+#include "CAudioTest1.h"
 
 
 //==============================================================================

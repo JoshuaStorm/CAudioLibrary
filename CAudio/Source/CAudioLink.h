@@ -17,12 +17,7 @@
 
 static const std::vector<std::string> cSliderNames =
 {
-    "SK Freq",
-    "SK Damping",
-    "SK Detune",
-    "SK PickPos",
-    "Reverb Mix",
-    "Reverb Time",
+    "OscPitch",
     "Gain"
 };
 
@@ -30,7 +25,7 @@ static const std::vector<std::string> cSliderNames =
 
 static const std::vector<std::string> cButtonNames =
 {
-    "Tap"
+    "Yin"
 };
 
 static const std::vector<std::string> cComboBoxNames =

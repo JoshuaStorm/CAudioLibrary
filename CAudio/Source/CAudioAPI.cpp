@@ -8,7 +8,7 @@
   ==============================================================================
 */
 
-#include "CAudioLibrary.h"
+#include "CAudioAPI.h"
 
 // The C-embedded Audio Library.
 #include "Wavetables.h"
@@ -2124,12 +2124,6 @@ void    tStifKarpSetFrequency  (tStifKarp *p, float frequency )
     tStifKarpSetStretch(p, p->stretching);
     
     tDelayLSetDelay(&p->combDelay, 0.5f * p->pickupPosition * p->lastLength );
-    
-    DBG("loopGain: " + String(p->loopGain));
-    DBG("combDelay: " + String( 0.5f * p->pickupPosition * p->lastLength));
-    DBG("lastLength: " + String(p->lastLength));
-    DBG("lastFreq: " + String( p->lastFrequency));
-    DBG("delayLine: " + String(delay));
     
 }
 

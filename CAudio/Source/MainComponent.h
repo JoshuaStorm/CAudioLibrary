@@ -15,7 +15,7 @@
 
 #include "UIComponent.h"
 
-#include "CAudioLibraryTest.h"
+#include "CAudioTest1.h"
 
 
 class MainContentComponent   :  public AudioAppComponent, public Slider::Listener, public AudioDeviceManager

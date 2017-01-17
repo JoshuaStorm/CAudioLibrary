@@ -1,27 +1,31 @@
 /*
   ==============================================================================
 
-    CAudioLibraryTest.h
-    Created: 4 Dec 2016 9:14:16pm
+    CAudioTest1.cpp
+    Created: 17 Jan 2017 12:23:33pm
     Author:  Michael R Mulshine
 
   ==============================================================================
 */
 
-#ifndef CAUDIOLIBRARYTEST_H_INCLUDED
-#define CAUDIOLIBRARYTEST_H_INCLUDED
+#include "CAudioTest1.h"
 
-#include "CAudioTestUtilities.h"
-
-#include "CAudioLibrary.h"
+#include "CAudioAPI.h"
 
 #include "Wavetables.h"
+
+#include "Yin.h"
+
+
+AudioVisualiserComponent *scope;
 
 
 float nRevDelayBufs[14][REV_DELAY_LENGTH];
 float prcRevDelayBufs[3][REV_DELAY_LENGTH];
 
 float skBuff[2][REV_DELAY_LENGTH];
+
+int16_t forYin[4096];
 
 float sampleRate;
 
@@ -71,6 +75,8 @@ tRamp ramp;
 
 tStifKarp pluck;
 
+Yin yin;
+
 #define REVERB 1
 #define SVF 0
 #define ONEPOLE 0
@@ -79,11 +85,12 @@ tStifKarp pluck;
 #define TWOPOLE 0
 #define BIQUAD 0
 
-#define BLOCK 0
+#define BLOCK 1
 
 
-void init(float sampleRate)
+void init(AudioVisualiserComponent* s, float sampleRate)
 {
+    scope = s;
     DBG("Initializing C Audio Library Test.");
     
     for (int i = 0; i < NUM_OSC; i++)
@@ -138,17 +145,14 @@ void init(float sampleRate)
 }
 
 int count;
-
+int yindex = 0;
 // Sample-rate callback.
 float tick(float input)
 {
     float sample    = 0.0f;
     
-    sample = tStifKarpTick(&pluck);
+    //sample = tStifKarpTick(&pluck);
     
-#if REVERB
-    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
-#endif
     
     
 #if BLOCK
@@ -177,7 +181,7 @@ float tick(float input)
     if (gNoiseLevel >= 0.05f)    sample += gNoiseLevel * tNoiseTick(&noise);
     
     // Envelope.
-    sample *= tEnvelopeTick(&env);
+    //sample *= tEnvelopeTick(&env);
     
 #if SVF
     // Lowpass.
@@ -197,12 +201,36 @@ float tick(float input)
 #endif
     
 #endif
+    
+#if REVERB
+    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
+#endif
 
     // Gain ramp.
     sample *= tRampTick(&ramp);
+    
+    if (++yindex == 4096)   yindex = 0;
+    
+    forYin[yindex] = (int16_t) (sample * INT16_MAX);
 
     return sample;
     
+}
+
+void yinGetPitch(void)
+{
+    float pitch;
+    
+    int16_t buffer_length = 100;
+    
+    while (pitch < 10 && buffer_length < 4096)
+    {
+        Yin_init(&yin, buffer_length, 0.05);
+        pitch = Yin_getPitch(&yin, forYin);
+        buffer_length++;
+    }
+    
+    DBG("YinPitch: " + String(pitch));
 }
 
 
@@ -211,14 +239,26 @@ void triggerEnvelope(void)
     tEnvelopeOn(&env, 1.0f);
     
     tStifKarpPluck(&pluck, 0.9f);
-    
 }
+
+float gSamplesBlock;
+
+
 
 
 // Block-rate callback.
 void block(void)
 {
     float val = 0.0f;
+    
+    val = getSliderValue("SamplesBlock");
+    
+    if (gSamplesBlock != val)
+    {
+        gSamplesBlock = val;
+        
+        scope->setSamplesPerBlock(gSamplesBlock * 100.0  + 1);
+    }
     
     val = getSliderValue("SK Freq");
     
@@ -288,6 +328,14 @@ void block(void)
         triggerEnvelope();
     }
     
+    // Yin
+    if (getButtonState("Yin"))
+    {
+        setButtonState("Yin", false);
+        yinGetPitch();
+    }
+    
+    
     // Gain
     gGain = getSliderValue("Gain");
     
@@ -330,9 +378,9 @@ void block(void)
             tSawtoothSetFreq(&saw[i], (10.0f + gFund * 1000.0f) * (i+1));
             
             tCycleSetFreq(&cyc[i], (10.0f + gFund * 1000.0f) * (i+1));
-            
-            DBG(String(10.0f + gFund * 1000.0f));
         }
+        
+        DBG("Pitch: " + String(10.0f + gFund * 1000.0f));
     }
     
 #if ONEZERO
@@ -460,12 +508,7 @@ void block(void)
     
     WaveformType state = (WaveformType) getComboBoxState("Waveform");
     
-    if (waveform != state)
-    {
-        waveform = state;
-        
-        DBG("waveform: " + cWaveformType[waveform]);
-    }
+    if (waveform != state)  waveform = state;
     
 #endif
     
@@ -473,4 +516,3 @@ void block(void)
 }
 
 
-#endif  // CAUDIOLIBRARYTEST_H_INCLUDED
