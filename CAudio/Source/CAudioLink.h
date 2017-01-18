@@ -25,7 +25,9 @@ static const std::vector<std::string> cSliderNames =
 
 static const std::vector<std::string> cButtonNames =
 {
-    "Yin"
+    "Yin",
+    "DoubleSR",
+    "HalfSR"
 };
 
 static const std::vector<std::string> cComboBoxNames =

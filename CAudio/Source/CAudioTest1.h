@@ -13,11 +13,19 @@
 
 #include "CAudioLink.h"
 
-#include "CAudioAPI.h"
+#include "OOPCAPI.h"
 
 #include "Wavetables.h"
 
 #include "Yin.h"
+
+
+#define YIN_BUFFER_LENGTH 2048 //higher better for low frequencies
+
+Yin yin;
+
+int yindex = 0;
+int16_t forYin[YIN_BUFFER_LENGTH];
 
 
 float nRevDelayBufs[14][REV_DELAY_LENGTH];
@@ -29,140 +37,52 @@ float sampleRate;
 
 float gGain;
 float gFund;
-float gNoiseLevel;
-float gSVFCutoff;
-float gResonance;
-float gAttack,gDecay;
-float gOnePolePole;
-float gOneZeroZero;
-float gTwoZeroFreq, gTwoZeroRadius;
-float gTwoPoleFreq, gTwoPoleRadius;
-float gBiQuadNotchFreq, gBiQuadNotchRadius;
-float gBiQuadResFreq, gBiQuadResRadius;
-bool  gTrigger;
-float gRevTime,gRevMix;
-float gSKFreq, gSKDamping, gSKPickPos, gSKDetune;
-WaveformType waveform = Sine;
+bool  gTrigger, gDSR, gHSR;
 
+WaveformType waveform = Sine;
 
 #define NUM_OSC 5
 
+tRamp ramp;
 tTriangle tri[NUM_OSC];
 tSquare sqr[NUM_OSC];
 tCycle cyc[NUM_OSC];
 tSawtooth saw[NUM_OSC];
 float oscGain[NUM_OSC] = {0.3, 0.2, .1, .1, .05};
 
-tNoise      noise;
-
-tSVF        svf;
-
-tEnvelope   env;
-
-tOnePole onepole;
-tTwoPole twopole;
-
-tOneZero onezero;
-tTwoZero twozero;
-
-tBiQuad biquad;
-
-tNRev rev;
-
-tRamp ramp;
-
-tStifKarp pluck;
-
-
-#define YIN_BUFFER_LENGTH 4096
-
-Yin yin;
-
-int yindex = 0;
-int16_t forYin[YIN_BUFFER_LENGTH];
-
-
-#define REVERB 0
-#define SVF 0
-#define ONEPOLE 0
-#define ONEZERO 0
-#define TWOZERO 0
-#define TWOPOLE 0
-#define BIQUAD 0
-
-#define BLOCK 0
-
+float sampleRateGlobal;
 
 void init(float sampleRate)
 {
+    sampleRateGlobal = sampleRate;
     DBG("Initializing C Audio Library Test.");
     
+    OOPCInit(sampleRate, &randomNumberGenerator);
+
     for (int i = 0; i < NUM_OSC; i++)
     {
-        tTriangleInit(&tri[i], sampleRate);
+        tTriangleInit(&tri[i]);
         tTriangleSetFreq(&tri[i], 100.0f * (i+1));
-        
-        tCycleInit(&cyc[i], sampleRate);
+    
+        tCycleInit(&cyc[i]);
         tCycleSetFreq(&cyc[i], 100.0f * (i+1));
         
-        tSquareInit(&sqr[i], sampleRate);
+        tSquareInit(&sqr[i]);
         tSquareSetFreq(&sqr[i], 100.0f * (i+1));
 
-        tSawtoothInit(&saw[i], sampleRate);
+        tSawtoothInit(&saw[i]);
         tSawtoothSetFreq(&saw[i], 100.0f * (i+1));
     }
     
-    tRampInit(&ramp, sampleRate, 20.0f, 1);
-    
-    tNoiseInit(&noise, sampleRate, &randomNumberGenerator, NoiseTypeWhite);
-    
-    tEnvelopeInit(&env, sampleRate, 2.0f, 500.0f, 0, exp_decay, attack_decay_inc);
-    
-    tStifKarpInit(&pluck, sampleRate, 20.0f, &randomNumberGenerator, skBuff);
-
-#if SVF
-    tSVFInit(&svf, sampleRate, SVFTypeLowpass, 2000, 1.0f);
-#endif
-    
-#if ONEPOLE
-    tOnePoleInit(&onepole, 0.5f);
-#endif
-    
-#if ONEZERO
-    tOneZeroInit(&onezero, 0.5f);
-#endif
-    
-#if TWOZERO
-    tTwoZeroInit(&twozero, sampleRate);
-#endif
-    
-#if TWOPOLE
-    tTwoPoleInit(&twopole, sampleRate);
-#endif
-    
-    tBiQuadInit(&biquad, sampleRate);
-    
-#if REVERB
-    tNRevInit(&rev, sampleRate, 0.0f, nRevDelayBufs);
-#endif
+    tRampInit(&ramp, 20.0f, 1);
     
 }
-
-int count;
-
-
 
 // Sample-rate callback.
 float tick(float input)
 {
     float sample    = 0.0f;
     
-#if REVERB
-    if (gRevMix > 0.05f)        sample = tNRevTick(&rev, sample);
-#endif
-    
-    
-
     // Oscillators.
     if (waveform == Sine)
     {
@@ -194,6 +114,7 @@ float tick(float input)
 
 float finalPitch;
 float maxProb;
+
 void yinPitchDetect(void)
 {
     int buffer_length = 100;
@@ -237,6 +158,29 @@ void block(void)
         setButtonState("Yin", false);
         yinPitchDetect();
     }
+
+    gDSR = getButtonState("DoubleSR");
+    
+    if (gDSR)
+    {
+        setButtonState("DoubleSR", false);
+        sampleRateGlobal *= 2;
+        OOPCSetSampleRate(sampleRateGlobal);
+        
+        DBG("sampleRateGlobal: " + String(sampleRateGlobal)); 
+    }
+    
+    gHSR = getButtonState("HalfSR");
+    
+    if (gHSR)
+    {
+        setButtonState("HalfSR", false);
+        sampleRateGlobal /= 2;
+        OOPCSetSampleRate(sampleRateGlobal);
+        
+        DBG("sampleRateGlobal: " + String(sampleRateGlobal));
+    }
+    
     
     // Gain
     gGain = getSliderValue("Gain");

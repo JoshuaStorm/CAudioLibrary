@@ -12,7 +12,15 @@
 #define CAUDIO_H_INCLUDED
 
 #include "stdint.h"
+#include "stdlib.h"
 
+#define DOUBLE 0
+
+#if     !DOUBLE
+#define OOPCFloat float
+#else
+#define OOPCFloat double
+#endif
 
 #define DELAY_BUFFER_LENGTH 16384
 #define REV_DELAY_LENGTH 65535
@@ -26,13 +34,18 @@
 
 #define ONE_OVER_128 1.0f / 128.0f
 
+#define NI 20
+
+
+
 #pragma Oscillators
 // Phasor: basic aliasing phasor
 typedef struct _tPhasor
 {
     float phase;
-    float inc;
-    float inv_sr;
+    float inc,freq;
+    
+    void (*sampleRateChanged)(void);
     
 } tPhasor;
 
@@ -41,8 +54,9 @@ typedef struct _tCycle
 {
     // Underlying phasor
     float phase;
-    float inc;
-    float inv_sr;
+    float inc,freq;
+    
+    void (*sampleRateChanged)(void);
     
 } tCycle;
 
@@ -52,7 +66,8 @@ typedef struct _tSawtooth
     // Underlying phasor
     float phase;
     float inc,freq;
-    float inv_sr;
+    
+    void (*sampleRateChanged)(void);
     
 } tSawtooth;
 
@@ -62,7 +77,8 @@ typedef struct _tTriangle
     // Underlying phasor
     float phase;
     float inc,freq;
-    float inv_sr;
+    
+    void (*sampleRateChanged)(void);
     
 } tTriangle;
 
@@ -72,7 +88,8 @@ typedef struct _tSquare
     // Underlying phasor
     float phase;
     float inc,freq;
-    float inv_sr;
+    
+    void (*sampleRateChanged)(void);
     
 } tSquare;
 
@@ -91,6 +108,8 @@ typedef struct _tNoise
     float pinkb0, pinkb1, pinkb2;
     float(*rand)();
     
+    void (*sampleRateChanged)(void);
+    
 } tNoise;
 
 #pragma Filters
@@ -103,6 +122,8 @@ typedef struct _tOnePole
     
     float lastIn, lastOut;
     
+    void (*sampleRateChanged)(void);
+    
 } tOnePole;
 
 // TwoPole filter
@@ -112,9 +133,9 @@ typedef struct _tTwoPole
     float a0, a1, a2;
     float b0;
     
-    float sr, inv_sr;
-    
     float lastOut[2];
+    
+    void (*sampleRateChanged)(void);
     
 } tTwoPole;
 
@@ -123,8 +144,9 @@ typedef struct _tOneZero
 {
     float gain;
     float b0,b1;
-    float sr;
     float lastIn, lastOut;
+    
+    void (*sampleRateChanged)(void);
     
 } tOneZero;
 
@@ -134,9 +156,9 @@ typedef struct _tTwoZero
     float gain;
     float b0, b1, b2;
     
-    float sr, inv_sr;
-    
     float lastIn[2];
+    
+    void (*sampleRateChanged)(void);
     
 } tTwoZero;
 
@@ -149,6 +171,8 @@ typedef struct _tPoleZero
     
     float lastIn, lastOut;
     
+    void (*sampleRateChanged)(void);
+    
 } tPoleZero;
 
 // BiQuad filter
@@ -158,10 +182,10 @@ typedef struct _tBiQuad
     float a0, a1, a2;
     float b0, b1, b2;
     
-    float sr, inv_sr;
-    
     float lastIn[2];
     float lastOut[2];
+    
+    void (*sampleRateChanged)(void);
     
     
 } tBiQuad;
@@ -178,29 +202,32 @@ typedef enum SVFType {
 // State Variable Filter, adapted from
 typedef struct _tSVF {
     SVFType type;
-    float inv_sr;
     float cutoff, Q;
     float ic1eq,ic2eq;
     float g,k,a1,a2,a3;
+    
+    void (*sampleRateChanged)(void);
     
 } tSVF;
 
 // State Variable Filter, adapted from ???
 typedef struct _tSVFEfficient {
     SVFType type;
-    float inv_sr;
     float cutoff, Q;
     float ic1eq,ic2eq;
     float g,k,a1,a2,a3;
+    
+    void (*sampleRateChanged)(void);
     
 } tSVFEfficient;
 
 // Highpass filter
 typedef struct _tHighpass
 {
-    float inv_sr;
     float xs, ys, R;
     float cutoff;
+    
+    void (*sampleRateChanged)(void);
     
 } tHighpass;
 
@@ -212,6 +239,8 @@ typedef struct _tRamp {
     float curr,dest;
     float time;
     int samples_per_tick;
+    
+    void (*sampleRateChanged)(void);
     
 } tRamp;
 
@@ -226,6 +255,8 @@ typedef struct _tDelay
     uint32_t inPoint, outPoint;
     
     uint32_t delay, maxDelay;
+    
+    void (*sampleRateChanged)(void);
     
 } tDelay;
 
@@ -244,6 +275,8 @@ typedef struct _tDelayL
     float delay;
     
     float alpha, omAlpha;
+    
+    void (*sampleRateChanged)(void);
     
 } tDelayL;
 
@@ -265,13 +298,14 @@ typedef struct _tDelayA
     
     float apInput;
     
+    void (*sampleRateChanged)(void);
+    
 } tDelayA;
 
 
 // Basic Attack-Decay envelope
 typedef struct _tEnvelope {
     
-    float inv_sr;
     const float *exp_buff;
     const float *inc_buff;
     uint32_t buff_size;
@@ -288,13 +322,16 @@ typedef struct _tEnvelope {
     
     float attackPhase, decayPhase, rampPhase;
     
+    void (*sampleRateChanged)(void);
+    
 } tEnvelope;
 
 // Attack-Decay-Sustain-Release envelope
 typedef struct _tADSR
 {
+
     
-    float inv_sr;
+    void (*sampleRateChanged)(void);
     
 } tADSR;
 
@@ -312,6 +349,8 @@ typedef struct _tPluck
     float loopGain;
     
     float sr;
+    
+    void (*sampleRateChanged)(void);
     
 } tPluck;
 
@@ -335,7 +374,7 @@ typedef struct _tStifKarp
     
     float lastOut;
     
-    float sr;
+    void (*sampleRateChanged)(void);
     
 } tStifKarp;
 
@@ -347,6 +386,8 @@ typedef struct _tEnvelopeFollower
     float a_thresh;
     float d_coeff;
     
+    void (*sampleRateChanged)(void);
+    
 } tEnvelopeFollower;
 
 
@@ -356,7 +397,7 @@ typedef struct _tPRCRev
 {
     float mix, t60;
     
-    float inv_sr, inv_441;
+    float inv_441;
     
     tDelay allpassDelays[2];
     tDelay combDelay;
@@ -364,6 +405,8 @@ typedef struct _tPRCRev
     float combCoeff;
     
     float lastIn, lastOut;
+    
+    void (*sampleRateChanged)(void);
     
 } tPRCRev;
 
@@ -382,6 +425,77 @@ typedef struct _tNRev
     
     float lastIn, lastOut;
     
+    void (*sampleRateChanged)(void);
+    
 } tNRev;
+
+typedef enum OOPCRegistryIndex
+{
+    T_PHASOR = 0,
+    T_CYCLE,
+    T_SAWTOOTH,
+    T_TRIANGLE,
+    T_SQUARE,
+    T_NOISE,
+    T_ONEPOLE,
+    T_TWOPOLE,
+    T_ONEZERO,
+    T_TWOZERO,
+    T_POLEZERO,
+    T_BIQUAD,
+    T_SVF,
+    T_SVFE,
+    T_HIGHPASS,
+    T_DELAY,
+    T_DELAYL,
+    T_DELAYA,
+    T_ENVELOPE,
+    T_ADSR,
+    T_RAMP,
+    T_ENVELOPEFOLLOW,
+    T_PRCREV,
+    T_NREV,
+    T_PLUCK,
+    T_STIFKARP,
+    T_INDEXCNT
+}OOPCRegistryIndex;
+
+#pragma OOPC
+typedef struct _OOPC
+{
+    float sampleRate, invSampleRate;
+    
+    float   (*random)(void);
+             
+    tPhasor*            tPhasorRegistry[NI];
+    tCycle*             tCycleRegistry[NI];
+    tSawtooth*          tSawtoothRegistry[NI];
+    tTriangle*          tTriangleRegistry[NI];
+    tSquare*            tSquareRegistry[NI];
+    tNoise*             tNoiseRegistry[NI];
+    tOnePole*           tOnePoleRegistry[NI];
+    tTwoPole*           tTwoPoleRegistry[NI];
+    tOneZero*           tOneZeroRegistry[NI];
+    tTwoZero*           tTwoZeroRegistry[NI];
+    tPoleZero*          tPoleZeroRegistry[NI];
+    tBiQuad*            tBiQuadRegistry[NI];
+    tSVF*               tSVFRegistry[NI];
+    tSVFEfficient*      tSVFEfficientRegistry[NI];
+    tHighpass*          tHighpassRegistry[NI];
+    tDelay*             tDelayRegistry[NI];
+    tDelayL*            tDelayLRegistry[NI];
+    tDelayA*            tDelayARegistry[NI];
+    tEnvelope*          tEnvelopeRegistry[NI];
+    tADSR*              tADSRRegistry[NI];
+    tRamp*              tRampRegistry[NI];
+    tEnvelopeFollower*  tEnvelopeFollowerRegistry[NI];
+    tPRCRev*            tPRCRevRegistry[NI];
+    tNRev*              tNRevRegistry[NI];
+    tPluck*             tPluckRegistry[NI];
+    tStifKarp*          tStifKarpRegistry[NI];
+     
+    int registryIndex[T_INDEXCNT];
+             
+} OOPC;
 
 #endif  // CAUDIO_H_INCLUDED

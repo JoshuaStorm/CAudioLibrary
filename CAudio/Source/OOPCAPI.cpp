@@ -8,7 +8,7 @@
   ==============================================================================
 */
 
-#include "CAudioAPI.h"
+#include "OOPCAPI.h"
 
 // The C-embedded Audio Library.
 #include "Wavetables.h"
@@ -22,8 +22,7 @@
 
 #define EXPONENTIAL_TABLE_SIZE 65536
 
-
-#define COMPUTE_INC() r->inc = ((r->dest-r->curr)/r->time * r->inv_sr_ms)*((float)r->samples_per_tick)
+OOPC *oopc;
 
 typedef enum TableName
 {
@@ -62,13 +61,15 @@ int     isPrimeAU(uint64 number )
     }
     else return false; // even
 }
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ PRCRev ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
 
 void    tPRCRevSetT60(tPRCRev *r, float t60)
 {
     if ( t60 <= 0.0 ) t60 = 0.001f;
     
-    r->combCoeff = pow(10.0, (-3.0 * tDelayGetDelay(&r->combDelay) * r->inv_sr / t60 ));
+    r->combCoeff = pow(10.0, (-3.0 * tDelayGetDelay(&r->combDelay) * oopc->invSampleRate / t60 ));
 
 }
 
@@ -110,15 +111,14 @@ float   tPRCRevTick(tPRCRev *r, float input)
 }
 
 
-int     tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][REV_DELAY_LENGTH])
+int     tPRCRevInit(tPRCRev *r, float t60, float delayBuffers[3][REV_DELAY_LENGTH])
 {
     if (t60 <= 0.0) t60 = 0.001f;
     
-    r->inv_sr = 1.0f/sr;
     r->inv_441 = 1.0f/44100.0f;
     
     int lengths[4] = { 341, 613, 1557, 2137 }; // Delay lengths for 44100 Hz sample rate.
-    double scaler = sr * r->inv_441;
+    double scaler = oopc->sampleRate * r->inv_441;
     
     int delay, i;
     if (scaler != 1.0)
@@ -134,9 +134,9 @@ int     tPRCRevInit(tPRCRev *r, float sr, float t60, float delayBuffers[3][REV_D
         }
     }
     
-    tDelayInit(&r->allpassDelays[0], lengths[0], REV_DELAY_LENGTH, delayBuffers[0]);
-    tDelayInit(&r->allpassDelays[1], lengths[1], REV_DELAY_LENGTH, delayBuffers[1]);
-    tDelayInit(&r->combDelay, lengths[2], REV_DELAY_LENGTH, delayBuffers[2]);
+    tDelayInit(&r->allpassDelays[0],    lengths[0], REV_DELAY_LENGTH, delayBuffers[0]);
+    tDelayInit(&r->allpassDelays[1],    lengths[1], REV_DELAY_LENGTH, delayBuffers[1]);
+    tDelayInit(&r->combDelay,           lengths[2], REV_DELAY_LENGTH, delayBuffers[2]);
     
     tPRCRevSetT60(r, t60);
     r->allpassCoeff = 0.7f;
@@ -151,7 +151,7 @@ void    tNRevSetT60(tNRev *r, float t60)
 {
     if (t60 <= 0.0)           t60 = 0.001f;
     
-    for (int i=0; i<6; i++)   r->combCoeffs[i] = pow(10.0, (-3.0 * tDelayGetDelay(&r->combDelays[i]) * r->inv_sr / t60 ));
+    for (int i=0; i<6; i++)   r->combCoeffs[i] = pow(10.0, (-3.0 * tDelayGetDelay(&r->combDelays[i]) * oopc->invSampleRate / t60 ));
     
 }
 
@@ -215,15 +215,14 @@ float   tNRevTick(tNRev *r, float input)
 }
 
 
-int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELAY_LENGTH])
+int     tNRevInit(tNRev *r, float t60, float delayBuffers[14][REV_DELAY_LENGTH])
 {
     if (t60 <= 0.0) t60 = 0.001f;
     
-    r->inv_sr = 1.0f/sr;
     r->inv_441 = 1.0f/44100.0f;
     
     int lengths[15] = {1433, 1601, 1867, 2053, 2251, 2399, 347, 113, 37, 59, 53, 43, 37, 29, 19}; // Delay lengths for 44100 Hz sample rate.
-    double scaler = sr / 25641.0f;
+    double scaler = oopc->sampleRate / 25641.0f;
     
     int delay, i;
     
@@ -240,7 +239,7 @@ int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELA
     for ( i=0; i<6; i++ )
     {
         tDelayInit(&r->combDelays[i], lengths[i], REV_DELAY_LENGTH, delayBuffers[i]);
-        r->combCoeffs[i] = pow(10.0, (-3 * lengths[i] * r->inv_sr / t60));
+        r->combCoeffs[i] = pow(10.0, (-3 * lengths[i] * oopc->invSampleRate / t60));
     }
     
     for ( i=0; i<8; i++ )
@@ -261,9 +260,8 @@ int     tNRevInit(tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELA
 
 #pragma mark - Filters
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OneZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int     tOneZeroInit(tOneZero *f, float theZero, float sr)
+int     tOneZeroInit(tOneZero *f, float theZero)
 {
-    f->sr = sr;
     f->gain = 1.0f;
     f->lastIn = 0.0f;
     f->lastOut = 0.0f;
@@ -316,7 +314,7 @@ float   tOneZeroGetPhaseDelay(tOneZero *f, float frequency )
 {
     if ( frequency <= 0.0) frequency = 0.05f;
     
-    float omegaT = 2 * PI * frequency / f->sr;
+    float omegaT = 2 * PI * frequency * oopc->invSampleRate;
     float real = 0.0, imag = 0.0;
     
     real += f->b0;
@@ -340,13 +338,11 @@ float   tOneZeroGetPhaseDelay(tOneZero *f, float frequency )
 
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OneZero Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int     tTwoZeroInit(tTwoZero *f, float sr)
+int     tTwoZeroInit(tTwoZero *f)
 {
     f->gain = 1.0f;
     f->lastIn[0] = 0.0f;
     f->lastIn[1] = 0.0f;
-    f->sr = sr;
-    f->inv_sr = 1.0f/sr;
     
     return 0;
 }
@@ -369,7 +365,7 @@ void    tTwoZeroSetNotch(tTwoZero *f, float freq, float radius)
     if (radius < 0.0f)  radius = 0.0f;
     
     f->b2 = radius * radius;
-    f->b1 = -2.0f * radius * cosf(TWO_PI * freq * f->inv_sr); // OPTIMIZE with LOOKUP or APPROXIMATION
+    f->b1 = -2.0f * radius * cosf(TWO_PI * freq * oopc->invSampleRate); // OPTIMIZE with LOOKUP or APPROXIMATION
     
     // Normalize the filter gain. From STK.
     if ( f->b1 > 0.0f ) // Maximum at z = 0.
@@ -468,14 +464,11 @@ int     tOnePoleInit(tOnePole *f, float thePole)
 }
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ TwoPole Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int     tTwoPoleInit(tTwoPole *f, float sr)
+int     tTwoPoleInit(tTwoPole *f)
 {
     f->gain = 1.0f;
     f->a0 = 1.0;
     f->b0 = 1.0;
-    
-    f->sr = sr;
-    f->inv_sr = 1.0f / sr;
     
     f->lastOut[0] = 0.0f;
     f->lastOut[1] = 0.0f;
@@ -517,13 +510,13 @@ void    tTwoPoleSetResonance(tTwoPole *f, float frequency, float radius, int nor
     if (radius >= 1.0f)     radius = 0.999999f;
     
     f->a2 = radius * radius;
-    f->a1 =  -2.0f * radius * cos(TWO_PI * frequency * f->inv_sr);
+    f->a1 =  -2.0f * radius * cos(TWO_PI * frequency * oopc->invSampleRate);
     
     if ( normalize )
     {
         // Normalize the filter gain ... not terribly efficient.
-        float real = 1 - radius + (f->a2 - radius) * cos(TWO_PI * 2 * frequency * f->inv_sr);
-        float imag = (f->a2 - radius) * sin(TWO_PI * 2 * frequency * f->inv_sr);
+        float real = 1 - radius + (f->a2 - radius) * cos(TWO_PI * 2 * frequency * oopc->invSampleRate);
+        float imag = (f->a2 - radius) * sin(TWO_PI * 2 * frequency * oopc->invSampleRate);
         f->b0 = sqrt( pow(real, 2) + pow(imag, 2) );
         
         // NEED TO OPTIMIZE and make sure sqrt/pow/cos are compatible. How do we want to handle this for platforms that it won't be compatible on?
@@ -631,12 +624,9 @@ int     tPoleZeroInit(tPoleZero *pzf)
 }
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ BiQuad Filter ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
-int     tBiQuadInit(tBiQuad *f, float sr)
+int     tBiQuadInit(tBiQuad *f)
 {
     f->gain = 1.0f;
-
-    f->sr = sr;
-    f->inv_sr = 1.0f/sr;
     
     f->b0 = 0.0f;
     f->a0 = 0.0f;
@@ -672,7 +662,7 @@ void    tBiQuadSetResonance(tBiQuad *f, float freq, float radius, int normalize)
     if (radius >= 1.0f)  radius = 1.0f;
     
     f->a2 = radius * radius;
-    f->a1 = -2.0f * radius * cosf(TWO_PI * freq * f->inv_sr);
+    f->a1 = -2.0f * radius * cosf(TWO_PI * freq * oopc->invSampleRate);
     
     if (normalize)
     {
@@ -689,7 +679,7 @@ void    tBiQuadSetNotch(tBiQuad *f, float freq, float radius)
     if (radius < 0.0f)  radius = 0.0f;
     
     f->b2 = radius * radius;
-    f->b1 = -2.0f * radius * cosf(TWO_PI * freq * f->inv_sr); // OPTIMIZE with LOOKUP or APPROXIMATION
+    f->b1 = -2.0f * radius * cosf(TWO_PI * freq * oopc->invSampleRate); // OPTIMIZE with LOOKUP or APPROXIMATION
     
     // Does not attempt to normalize filter gain.
 }
@@ -1243,10 +1233,9 @@ float   tEnvelopeTick(tEnvelope *env)
     return env->next;
 }
 
-int     tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
+int     tEnvelopeInit(tEnvelope *env, float attack, float decay, int loop,
                       const float *exponentialTable, const float *attackDecayIncTable)
 {
-    env->inv_sr = 1.0f/sr;
     env->exp_buff = exponentialTable;
     env->inc_buff = attackDecayIncTable;
     env->buff_size = sizeof(exponentialTable);
@@ -1288,7 +1277,8 @@ int     tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int l
 /* Phasor */
 int     tPhasorFreq(tPhasor *p, float freq)
 {
-    p->inc = freq * p->inv_sr;
+    p->freq = freq;
+    p->inc = freq * oopc->invSampleRate;
     
     return 0;
 }
@@ -1302,14 +1292,20 @@ float   tPhasorTick(tPhasor *p)
     return p->phase;
 }
 
-int     tPhasorInit(tPhasor *p, float sr)
+int     tPhasorInit(tPhasor *p)
 {
     p->phase = 0.0f;
     p->inc = 0.0f;
-    p->inv_sr = 1.0f/sr;
+    
+    OOPC_tPhasorRegister(p);
     
     return 0;
 }
+
+void     tPhasorSampleRateChanged (tPhasor *p)
+{
+    p->inc = p->freq * oopc->invSampleRate;
+};
 
 float   tSVFTick(tSVF *svf, float v0)
 {
@@ -1350,9 +1346,8 @@ int     tSVFSetQ(tSVF *svf, float Q)
     return 0;
 }
 
-int     tSVFInit(tSVF *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
+int     tSVFInit(tSVF *svf, SVFType type, uint16_t cutoffKnob, float Q)
 {
-    svf->inv_sr = 1.0f/sr;
     svf->type = type;
     
     svf->ic1eq = 0;
@@ -1415,9 +1410,8 @@ int     tSVFEfficientSetQ(tSVF *svf, float Q)
     return 0;
 }
 
-int     tSVFEfficientInit(tSVFEfficient *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q)
+int     tSVFEfficientInit(tSVFEfficient *svf, SVFType type, uint16_t cutoffKnob, float Q)
 {
-    svf->inv_sr = 1.0f/sr;
     svf->type = type;
     
     svf->ic1eq = 0;
@@ -1477,7 +1471,7 @@ int     tEnvelopeFollowerInit(tEnvelopeFollower *ef, float attackThreshold, floa
 int     tHighpassFreq(tHighpass *hp, float freq)
 {
     
-    hp->R = (1.0f-((freq * 2.0f * 3.14f)*hp->inv_sr));
+    hp->R = (1.0f-((freq * 2.0f * 3.14f) * oopc->invSampleRate));
     
     return 0;
 }
@@ -1490,10 +1484,9 @@ float   tHighpassTick(tHighpass *hp, float x)
     return hp->ys;
 }
 
-int     tHighpassInit(tHighpass *hp, float sr, float freq)
+int     tHighpassInit(tHighpass *hp, float freq)
 {
-    hp->inv_sr = 1.0f/sr;
-    hp->R = (1.0f-((freq * 2.0f * 3.14f)*hp->inv_sr));
+    hp->R = (1.0f-((freq * 2.0f * 3.14f)* oopc->invSampleRate));
     hp->ys = 0.0f;
     hp->xs = 0.0f;
     
@@ -1501,9 +1494,27 @@ int     tHighpassInit(tHighpass *hp, float sr, float freq)
 }
 
 /* Cycle */
+void     tCycleSampleRateChanged (tCycle *c)
+{
+    c->inc = c->freq * oopc->invSampleRate;
+}
+
+
+int     tCycleInit(tCycle *c)
+{
+    // Underlying phasor
+    c->inc      =  (OOPCFloat) 0.0;
+    c->phase    =  (OOPCFloat) 0.0;
+    
+    OOPC_tCycleRegister(c);
+    
+    return 0;
+}
+
 int     tCycleSetFreq(tCycle *c, float freq)
 {
-    c->inc = freq * c->inv_sr;
+    c->freq = freq;
+    c->inc = freq * oopc->invSampleRate;
     
     return 0;
 }
@@ -1524,21 +1535,22 @@ float   tCycleTick(tCycle *c)
     return (samp0 + (samp1 - samp0) * fracPart);
 }
 
-int     tCycleInit(tCycle *c, float sr)
+
+/* Sawtooth */
+int     tSawtoothInit(tSawtooth *c)
 {
     // Underlying phasor
     c->inc = 0.0f;
     c->phase = 0.0f;
-    c->inv_sr = 1.0f/sr;
+    
+    OOPC_tSawtoothRegister(c);
     
     return 0;
 }
-
-/* Sawtooth */
 int     tSawtoothSetFreq(tSawtooth *c, float freq)
 {
     c->freq = freq;
-    c->inc = freq * c->inv_sr;
+    c->inc = freq * oopc->invSampleRate;
     
     return 0;
 }
@@ -1638,25 +1650,32 @@ float   tSawtoothTick(tSawtooth *c)
     return out;
 }
 
-int     tSawtoothInit(tSawtooth *c, float sr)
+void     tSawtoothSampleRateChanged (tSawtooth *c)
+{
+    c->inc = c->freq * oopc->invSampleRate;
+}
+
+
+/* Triangle */
+
+int     tTriangleInit(tTriangle *c)
 {
     // Underlying phasor
     c->inc = 0.0f;
     c->phase = 0.0f;
-    c->inv_sr = 1.0f/sr;
+    
+    OOPC_tTriangleRegister(c);
     
     return 0;
 }
-
-/* Triangle */
-int     tTriangleSetFreq(tTriangle *c, float freq)
+int
+tTriangleSetFreq(tTriangle *c, float freq)
 {
     c->freq = freq;
-    c->inc = freq * c->inv_sr;
+    c->inc = freq * oopc->invSampleRate;
     
     return 0;
 }
-
 
 
 float   tTriangleTick(tTriangle *c)
@@ -1754,26 +1773,32 @@ float   tTriangleTick(tTriangle *c)
     return out;
 }
 
-int     tTriangleInit(tTriangle *c, float sr)
+void     tTriangleSampleRateChanged (tTriangle *c)
+{
+    c->inc = c->freq * oopc->invSampleRate;
+}
+
+
+/* Square */
+
+int     tSquareInit(tSquare *c)
 {
     // Underlying phasor
     c->inc = 0.0f;
     c->phase = 0.0f;
-    c->inv_sr = 1.0f/sr;
+    
+    OOPC_tSquareRegister(c);
     
     return 0;
 }
 
-/* Square */
 int     tSquareSetFreq(tSquare *c, float freq)
 {
     c->freq = freq;
-    c->inc = freq * c->inv_sr;
+    c->inc = freq * oopc->invSampleRate;
     
     return 0;
 }
-
-
 
 float   tSquareTick(tSquare *c)
 {
@@ -1870,17 +1895,13 @@ float   tSquareTick(tSquare *c)
     return out;
 }
 
-int     tSquareInit(tSquare *c, float sr)
+void     tSquareSampleRateChanged (tSquare *c)
 {
-    // Underlying phasor
-    c->inc = 0.0f;
-    c->phase = 0.0f;
-    c->inv_sr = 1.0f/sr;
-    
-    return 0;
+    c->inc = c->freq * oopc->invSampleRate;
 }
 
 
+/* Noise */
 float   tNoiseTick(tNoise *n)
 {
     float rand = n->rand();
@@ -1900,24 +1921,24 @@ float   tNoiseTick(tNoise *n)
     }
 }
 
-int     tNoiseInit(tNoise *n, float sr, float (*randomNumberGenerator)(), NoiseType type)
+int     tNoiseInit(tNoise *n, NoiseType type)
 {
     n->type = type;
-    n->rand = randomNumberGenerator;
+    n->rand = oopc->random;
     return 0;
 }
 
 int     tRampSetTime(tRamp *r, float time)
 {
     r->time = time;
-    COMPUTE_INC();
+    r->inc = ((r->dest-r->curr)/r->time * r->inv_sr_ms)*((float)r->samples_per_tick);
     return 0;
 }
 
 int     tRampSetDest(tRamp *r, float dest)
 {
     r->dest = dest;
-    COMPUTE_INC();
+    r->inc = ((r->dest-r->curr)/r->time * r->inv_sr_ms)*((float)r->samples_per_tick);
     return 0;
 }
 
@@ -1930,30 +1951,35 @@ float   tRampTick(tRamp *r) {
     return r->curr;
 }
 
-int     tRampInit(tRamp *r, float sr, float time, int samples_per_tick)
+int     tRampInit(tRamp *r, float time, int samples_per_tick)
 {
-    r->inv_sr_ms = 1.0f/(sr*0.001f);
+    r->inv_sr_ms = 1.0f/(oopc->sampleRate*0.001f);
     r->curr = 0.0f;
     r->dest = 0.0f;
     r->time = time;
     r->samples_per_tick = samples_per_tick;
-    COMPUTE_INC();
+    r->inc = ((r->dest-r->curr)/r->time * r->inv_sr_ms)*((float)r->samples_per_tick);
+    
+    OOPC_tRampRegister(r);
+    
     return 0;
+}
+
+void    tRampSampleRateChanged(tRamp *r)
+{
+    r->inv_sr_ms = 1.0f / (oopc->sampleRate * 0.001f);
+    r->inc = ((r->dest-r->curr)/r->time * r->inv_sr_ms)*((float)r->samples_per_tick);
 }
 
 #pragma Physical Models
 /* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ tPluck ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
-int     tPluckInit          (tPluck *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[REV_DELAY_LENGTH])
+int     tPluckInit          (tPluck *p, float lowestFrequency,  float delayBuff[REV_DELAY_LENGTH])
 {
     if ( lowestFrequency <= 0.0f )  lowestFrequency = 10.0f;
     
-    p->sr = sr;
-    
-   // uint32_t delays = (uint32_t) ( sr / lowestFrequency );
-    
-    tNoiseInit(&p->noise, sr, randomNumberGenerator, NoiseTypeWhite);
+    tNoiseInit(&p->noise, NoiseTypeWhite);
     tOnePoleInit(&p->pickFilter, 0.0f);
-    tOneZeroInit(&p->loopFilter, 0.0f, sr);
+    tOneZeroInit(&p->loopFilter, 0.0f);
     
     
     tDelayAInit(&p->delayLine, 0.0f, REV_DELAY_LENGTH, delayBuff);
@@ -2006,7 +2032,7 @@ void    tPluckSetFrequency  (tPluck *p, float frequency )
     if ( frequency <= 0.0f )   frequency = 0.001f;
     
     // Delay = length - filter delay.
-    float delay = ( p->sr / frequency ) - tOneZeroGetPhaseDelay(&p->loopFilter, frequency );
+    float delay = ( oopc->sampleRate / frequency ) - tOneZeroGetPhaseDelay(&p->loopFilter, frequency );
     
     tDelayASetDelay(&p->delayLine, delay );
     
@@ -2024,22 +2050,20 @@ void    tPluckControlChange (tPluck *p, int number, float value)
 /* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
 
 /* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ tStifKarp ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
-int     tStifKarpInit          (tStifKarp *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[2][REV_DELAY_LENGTH])
+int     tStifKarpInit          (tStifKarp *p, float lowestFrequency, float delayBuff[2][REV_DELAY_LENGTH])
 {
     if ( lowestFrequency <= 0.0f )  lowestFrequency = 8.0f;
-    
-    p->sr = sr;
     
     tDelayAInit(&p->delayLine, 0.0f, REV_DELAY_LENGTH, delayBuff[0]);
     tDelayLInit(&p->combDelay, 0.0f, REV_DELAY_LENGTH, delayBuff[1]);
     
-    tOneZeroInit(&p->filter, 0.0f, sr);
+    tOneZeroInit(&p->filter, 0.0f);
     
-    tNoiseInit(&p->noise, sr, randomNumberGenerator, NoiseTypeWhite);
+    tNoiseInit(&p->noise, NoiseTypeWhite);
     
     for (int i = 0; i < 4; i++)
     {
-        tBiQuadInit(&p->biquad[i], sr);
+        tBiQuadInit(&p->biquad[i]);
     }
     
     p->pluckAmplitude = 0.3f;
@@ -2113,7 +2137,7 @@ void    tStifKarpSetFrequency  (tStifKarp *p, float frequency )
     if ( frequency <= 0.0f )   frequency = 0.001f;
     
     p->lastFrequency = frequency;
-    p->lastLength = p->sr / p->lastFrequency;
+    p->lastLength = oopc->sampleRate / p->lastFrequency;
     float delay = p->lastLength - 0.5f;
     tDelayASetDelay(&p->delayLine, delay );
     
@@ -2133,7 +2157,7 @@ void    tStifKarpSetStretch         (tStifKarp *p, float stretch )
     p->stretching = stretch;
     float coefficient;
     float freq = p->lastFrequency * 2.0f;
-    float dFreq = ( (0.5f * p->sr) - freq ) * 0.25f;
+    float dFreq = ( (0.5f * oopc->sampleRate) - freq ) * 0.25f;
     float temp = 0.5f + (stretch * 0.5f);
     if ( temp > 0.9999f ) temp = 0.9999f;
     
@@ -2144,7 +2168,7 @@ void    tStifKarpSetStretch         (tStifKarp *p, float stretch )
         tBiQuadSetB0(&p->biquad[i], coefficient);
         tBiQuadSetB2(&p->biquad[i], 1.0f);
         
-        coefficient = -2.0f * temp * cos(TWO_PI * freq / p->sr);
+        coefficient = -2.0f * temp * cos(TWO_PI * freq / oopc->sampleRate);
         tBiQuadSetA1(&p->biquad[i], coefficient);
         tBiQuadSetB1(&p->biquad[i], coefficient);
         
@@ -2187,3 +2211,314 @@ void    tStifKarpControlChange (tStifKarp *p, SKControlType type, float value)
 
 }
 /* ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ */
+
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OOPC ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+int OOPCInit(float sr, float(*random)(void))
+{
+    oopc = (OOPC*) malloc(sizeof(OOPC));
+    
+    for (int i = 0; i < NI; i++)    oopc->tPhasorRegistry[i]            = (tPhasor*) malloc(sizeof(tPhasor));
+    for (int i = 0; i < NI; i++)    oopc->tCycleRegistry[i]             = (tCycle*) malloc(sizeof(tCycle));
+    for (int i = 0; i < NI; i++)    oopc->tSawtoothRegistry[i]          = (tSawtooth*) malloc(sizeof(tSawtooth));
+    for (int i = 0; i < NI; i++)    oopc->tTriangleRegistry[i]          = (tTriangle*) malloc(sizeof(tTriangle));
+    for (int i = 0; i < NI; i++)    oopc->tSquareRegistry[i]            = (tSquare*) malloc(sizeof(tSquare));
+    for (int i = 0; i < NI; i++)    oopc->tNoiseRegistry[i]             = (tNoise*) malloc(sizeof(tNoise));
+    for (int i = 0; i < NI; i++)    oopc->tOnePoleRegistry[i]           = (tOnePole*) malloc(sizeof(tOnePole));
+    for (int i = 0; i < NI; i++)    oopc->tTwoPoleRegistry[i]           = (tTwoPole*) malloc(sizeof(tTwoPole));
+    for (int i = 0; i < NI; i++)    oopc->tOneZeroRegistry[i]           = (tOneZero*) malloc(sizeof(tOneZero));
+    for (int i = 0; i < NI; i++)    oopc->tTwoZeroRegistry[i]           = (tTwoZero*) malloc(sizeof(tTwoZero));
+    for (int i = 0; i < NI; i++)    oopc->tPoleZeroRegistry[i]          = (tPoleZero*) malloc(sizeof(tPoleZero));
+    for (int i = 0; i < NI; i++)    oopc->tBiQuadRegistry[i]            = (tBiQuad*) malloc(sizeof(tBiQuad));
+    for (int i = 0; i < NI; i++)    oopc->tSVFRegistry[i]               = (tSVF*) malloc(sizeof(tSVF));
+    for (int i = 0; i < NI; i++)    oopc->tSVFEfficientRegistry[i]      = (tSVFEfficient*) malloc(sizeof(tSVFEfficient));
+    for (int i = 0; i < NI; i++)    oopc->tHighpassRegistry[i]          = (tHighpass*) malloc(sizeof(tHighpass));
+    for (int i = 0; i < NI; i++)    oopc->tDelayRegistry[i]             = (tDelay*) malloc(sizeof(tDelay));
+    for (int i = 0; i < NI; i++)    oopc->tDelayLRegistry[i]            = (tDelayL*) malloc(sizeof(tDelayL));
+    for (int i = 0; i < NI; i++)    oopc->tDelayARegistry[i]            = (tDelayA*) malloc(sizeof(tDelayA));
+    for (int i = 0; i < NI; i++)    oopc->tEnvelopeRegistry[i]          = (tEnvelope*) malloc(sizeof(tEnvelope));
+    for (int i = 0; i < NI; i++)    oopc->tADSRRegistry[i]              = (tADSR*) malloc(sizeof(tADSR));
+    for (int i = 0; i < NI; i++)    oopc->tRampRegistry[i]              = (tRamp*) malloc(sizeof(tRamp));
+    for (int i = 0; i < NI; i++)    oopc->tADSRRegistry[i]              = (tADSR*) malloc(sizeof(tADSR));
+    for (int i = 0; i < NI; i++)    oopc->tEnvelopeFollowerRegistry[i]  = (tEnvelopeFollower*) malloc(sizeof(tEnvelopeFollower));
+    for (int i = 0; i < NI; i++)    oopc->tPRCRevRegistry[i]            = (tPRCRev*) malloc(sizeof(tPRCRev));
+    for (int i = 0; i < NI; i++)    oopc->tNRevRegistry[i]              = (tNRev*) malloc(sizeof(tNRev));
+    for (int i = 0; i < NI; i++)    oopc->tPluckRegistry[i]             = (tPluck*) malloc(sizeof(tPluck));
+    for (int i = 0; i < NI; i++)    oopc->tStifKarpRegistry[i]          = (tStifKarp*) malloc(sizeof(tStifKarp));
+    
+    oopc->sampleRate = sr;
+    
+    oopc->invSampleRate = 1.0f/sr;
+    
+    oopc->random = random;
+    
+    for (int i = 0; i < T_INDEXCNT; i++)
+        oopc->registryIndex[i] = 0;
+    
+    return 0;
+}
+
+int OOPCSetSampleRate(float sampleRate)
+{
+    oopc->sampleRate = sampleRate;
+    oopc->invSampleRate = 1.0f/sampleRate;
+    
+    for (int i = 0; i < oopc->registryIndex[T_PHASOR]; i++)         tPhasorSampleRateChanged(oopc->tPhasorRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_CYCLE]; i++)          tCycleSampleRateChanged(oopc->tCycleRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_SAWTOOTH]; i++)       tSawtoothSampleRateChanged(oopc->tSawtoothRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_TRIANGLE]; i++)       tTriangleSampleRateChanged(oopc->tTriangleRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_SQUARE]; i++)         tSquareSampleRateChanged(oopc->tSquareRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_NOISE]; i++)          tNoiseSampleRateChanged(oopc->tNoiseRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_ONEPOLE]; i++)        tOnePoleSampleRateChanged(oopc->tOnePoleRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_TWOPOLE]; i++)        tTwoPoleSampleRateChanged(oopc->tTwoPoleRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_ONEZERO]; i++)        tOneZeroSampleRateChanged(oopc->tOneZeroRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_TWOZERO]; i++)        tTwoZeroSampleRateChanged(oopc->tTwoZeroRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_POLEZERO]; i++)       tPoleZeroSampleRateChanged(oopc->tPoleZeroRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_BIQUAD]; i++)         tBiQuadSampleRateChanged(oopc->tBiQuadRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_SVF]; i++)            tSVFSampleRateChanged(oopc->tSVFRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_SVFE]; i++)           tSVFEfficientSampleRateChanged(oopc->tSVFEfficientRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_HIGHPASS]; i++)       tHighpassSampleRateChanged(oopc->tHighpassRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_DELAY]; i++)          tDelaySampleRateChanged(oopc->tDelayRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_DELAYL]; i++)         tDelayLSampleRateChanged(oopc->tDelayLRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_DELAYA]; i++)         tDelayASampleRateChanged(oopc->tDelayARegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_ENVELOPE]; i++)       tEnvelopeSampleRateChanged(oopc->tEnvelopeRegistry[i]);
+    //for (int i = 0; i < oopc->registryIndex[T_ADSR]; i++)           tADSRSampleRateChanged(oopc->tADSRRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_RAMP]; i++)           tRampSampleRateChanged(oopc->tRampRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_ENVELOPEFOLLOW]; i++) tEnvelopeFollowerSampleRateChanged(oopc->tEnvelopeFollowerRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_PRCREV]; i++)         tPRCRevSampleRateChanged(oopc->tPRCRevRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_NREV]; i++)           tNRevSampleRateChanged(oopc->tNRevRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_PLUCK]; i++)          tPluckSampleRateChanged(oopc->tPluckRegistry[i]);
+    for (int i = 0; i < oopc->registryIndex[T_STIFKARP]; i++)       tStifKarpSampleRateChanged(oopc->tStifKarpRegistry[i]);
+    
+    return 0;
+}
+
+int OOPCGetSampleRate()
+{
+    return oopc->sampleRate;
+}
+
+
+int OOPC_tPhasorRegister(tPhasor *o)
+{
+    oopc->tPhasorRegistry[oopc->registryIndex[T_PHASOR]] = o;
+    
+    return oopc->registryIndex[T_PHASOR]++;
+}
+
+int OOPC_tCycleRegister(tCycle *o)
+{
+    oopc->tCycleRegistry[oopc->registryIndex[T_CYCLE]] = o;
+    
+    return oopc->registryIndex[T_CYCLE]++;
+}
+
+int OOPC_tSawtoothRegister(tSawtooth *o)
+{
+    oopc->tSawtoothRegistry[oopc->registryIndex[T_SAWTOOTH]] = o;
+    
+    return oopc->registryIndex[T_SAWTOOTH]++;
+}
+
+int OOPC_tTriangleRegister(tTriangle *o)
+{
+    oopc->tTriangleRegistry[oopc->registryIndex[T_TRIANGLE]] = o;
+    
+    return oopc->registryIndex[T_TRIANGLE]++;
+}
+
+int OOPC_tSquareRegister(tSquare *o)
+{
+    oopc->tSquareRegistry[oopc->registryIndex[T_SQUARE]] = o;
+    
+    return oopc->registryIndex[T_SQUARE]++;
+}
+
+int OOPC_tNoiseRegister(tNoise *o)
+{
+    oopc->tNoiseRegistry[oopc->registryIndex[T_NOISE]] = o;
+    
+    return oopc->registryIndex[T_NOISE]++;
+}
+
+int OOPC_tOnePoleRegister(tOnePole *o)
+{
+    oopc->tOnePoleRegistry[oopc->registryIndex[T_ONEPOLE]] = o;
+    
+    return oopc->registryIndex[T_ONEPOLE]++;
+}
+
+int OOPC_tPhasorRegister(tTwoPole *o)
+{
+    oopc->tTwoPoleRegistry[oopc->registryIndex[T_TWOPOLE]] = o;
+    
+    return oopc->registryIndex[T_TWOPOLE]++;
+}
+
+int OOPC_tOneZeroRegister(tOneZero *o)
+{
+    oopc->tOneZeroRegistry[oopc->registryIndex[T_ONEZERO]] = o;
+    
+    return oopc->registryIndex[T_ONEZERO]++;
+}
+
+int OOPC_tTwoZeroRegister(tTwoZero *o)
+{
+    oopc->tTwoZeroRegistry[oopc->registryIndex[T_TWOZERO]] = o;
+    
+    return oopc->registryIndex[T_TWOZERO]++;
+}
+
+int OOPC_tPoleZeroRegister(tPoleZero *o)
+{
+    oopc->tPoleZeroRegistry[oopc->registryIndex[T_POLEZERO]] = o;
+    
+    return oopc->registryIndex[T_POLEZERO]++;
+}
+
+int OOPC_tBiQuadRegister(tBiQuad *o)
+{
+    oopc->tBiQuadRegistry[oopc->registryIndex[T_BIQUAD]] = o;
+    
+    return oopc->registryIndex[T_BIQUAD]++;
+}
+
+int OOPC_tSVFRegister(tSVF *o)
+{
+    oopc->tSVFRegistry[oopc->registryIndex[T_SVF]] = o;
+    
+    return oopc->registryIndex[T_SVF]++;
+}
+
+int OOPC_tSVFEfficientRegister(tSVFEfficient *o)
+{
+    oopc->tSVFEfficientRegistry[oopc->registryIndex[T_SVFE]] = o;
+    
+    return oopc->registryIndex[T_SVFE]++;
+}
+
+int OOPC_tHighpassRegister(tHighpass *o)
+{
+    oopc->tHighpassRegistry[oopc->registryIndex[T_HIGHPASS]] = o;
+    
+    return oopc->registryIndex[T_HIGHPASS]++;
+}
+
+int OOPC_tDelayRegister(tDelay *o)
+{
+    oopc->tDelayRegistry[oopc->registryIndex[T_DELAY]] = o;
+    
+    return oopc->registryIndex[T_DELAY]++;
+}
+
+int OOPC_tDelayLRegister(tDelayL *o)
+{
+    oopc->tDelayLRegistry[oopc->registryIndex[T_DELAYL]] = o;
+    
+    return oopc->registryIndex[T_DELAYL]++;
+}
+int OOPC_tDelayARegister(tDelayA *o)
+{
+    oopc->tDelayARegistry[oopc->registryIndex[T_DELAYA]] = o;
+    
+    return oopc->registryIndex[T_DELAYA]++;
+}
+
+int OOPC_tEnvelopeRegister(tEnvelope *o)
+{
+    oopc->tEnvelopeRegistry[oopc->registryIndex[T_ENVELOPE]] = o;
+    
+    return oopc->registryIndex[T_ENVELOPE]++;
+}
+
+int OOPC_tADSRRegister(tADSR *o)
+{
+    oopc->tADSRRegistry[oopc->registryIndex[T_ADSR]] = o;
+    
+    return oopc->registryIndex[T_ADSR]++;
+}
+
+int OOPC_tRampRegister(tRamp *o)
+{
+    oopc->tRampRegistry[oopc->registryIndex[T_RAMP]] = o;
+    
+    return oopc->registryIndex[T_RAMP]++;
+}
+
+int OOPC_tEnvelopeFollowerRegister(tEnvelopeFollower *o)
+{
+    oopc->tEnvelopeFollowerRegistry[oopc->registryIndex[T_ENVELOPEFOLLOW]] = o;
+    
+    return oopc->registryIndex[T_ENVELOPEFOLLOW]++;
+}
+
+int OOPC_tPRCRevRegister(tPRCRev *o)
+{
+    oopc->tPRCRevRegistry[oopc->registryIndex[T_PRCREV]] = o;
+    
+    return oopc->registryIndex[T_PRCREV]++;
+}
+
+int OOPC_tNRevRegister(tNRev *o)
+{
+    oopc->tNRevRegistry[oopc->registryIndex[T_NREV]] = o;
+    
+    return oopc->registryIndex[T_NREV]++;
+}
+
+int OOPC_tPluckRegister(tPluck *o)
+{
+    oopc->tPluckRegistry[oopc->registryIndex[T_PLUCK]] = o;
+    
+    return oopc->registryIndex[T_PLUCK]++;
+}
+
+int OOPC_tStifKarpRegister(tStifKarp *o)
+{
+    oopc->tStifKarpRegistry[oopc->registryIndex[T_STIFKARP]] = o;
+    
+    return oopc->registryIndex[T_STIFKARP]++;
+}
+
+
+
+void     tNoiseSampleRateChanged (tNoise *c) {};
+
+void     tOnePoleSampleRateChanged (tOnePole *c) {};
+
+void     tTwoPoleSampleRateChanged (tTwoPole *c) {};
+
+void     tOneZeroSampleRateChanged (tOneZero *c) {};
+
+void     tTwoZeroSampleRateChanged (tTwoZero *c) {};
+
+void     tPoleZeroSampleRateChanged (tPoleZero *c) {};
+
+void     tBiQuadSampleRateChanged (tBiQuad *c) {};
+
+void     tSVFSampleRateChanged (tSVF *c) {};
+
+void     tSVFEfficientSampleRateChanged (tSVFEfficient *c) {};
+
+void     tHighpassSampleRateChanged (tHighpass *c) {};
+
+void     tDelaySampleRateChanged (tDelay *c) {};
+
+void     tDelayLSampleRateChanged (tDelayL *c) {};
+
+void     tDelayASampleRateChanged (tDelayA *c) {};
+
+void     tEnvelopeSampleRateChanged (tEnvelope *c) {};
+
+void     tEnvelopeFollowerSampleRateChanged (tEnvelopeFollower *c) {};
+
+void     tPRCRevSampleRateChanged (tPRCRev *c) {};
+
+void     tNRevSampleRateChanged (tNRev *c) {};
+
+void     tPluckSampleRateChanged (tPluck *c) {};
+
+void    tStifKarpSampleRateChanged (tStifKarp *c) {};
+
+
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ //
+

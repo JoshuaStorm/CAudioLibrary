@@ -13,37 +13,49 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
-#include "CAudio.h"
+#include "OOPC.h"
+
+#pragma OOPC
+int         OOPCInit            (float sr, float(*random)(void));
+int         OOPCSetSampleRate   (float sampleRate);
+int         OOPCGetSampleRate   (void);
+int         OOPCRegister        (void (*updater)(void));
 
 #pragma Basic oscillators/waveforms
 /* tPhasor: Aliasing phasor [0.0, 1.0) */
-int      tPhasorInit(tPhasor *p, float sr);
+int      tPhasorInit(tPhasor *p);
 int      tPhasorFreq(tPhasor *p, float freq);
 float    tPhasorTick(tPhasor *p);
+void     tPhasorSampleRateChanged (tPhasor *c);
 
 /* tCycle: Cycle/Sine waveform */
-int      tCycleInit(tCycle *c, float sr);
+int      tCycleInit(tCycle *c);
 int      tCycleSetFreq(tCycle *c, float freq);
 float    tCycleTick(tCycle *c);
+void     tCycleSampleRateChanged (tCycle *c);
 
 /* tSawtooth: Anti-aliased Sawtooth waveform*/
-int      tSawtoothInit(tSawtooth *t, float sr);
+int      tSawtoothInit(tSawtooth *t);
 int      tSawtoothSetFreq(tSawtooth *s, float freq);
 float    tSawtoothTick(tSawtooth *s);
+void     tSawtoothSampleRateChanged (tSawtooth *c);
 
 /* tTriangle: Anti-aliased Triangle waveform */
-int      tTriangleInit(tTriangle *t, float sr);
+int      tTriangleInit(tTriangle *t);
 int      tTriangleSetFreq(tTriangle *t, float freq);
 float    tTriangleTick(tTriangle *t);
+void     tTriangleSampleRateChanged (tTriangle *c);
 
 /* tSquare: Anti-aliased Square waveform */
-int      tSquareInit  (tSquare *p, float sr);
+int      tSquareInit  (tSquare *p);
 int      tSquareSetFreq  (tSquare *p, float freq);
 float    tSquareTick  (tSquare *p);
+void     tSquareSampleRateChanged (tSquare *c);
 
 /* tNoise: Noise generator */
-int      tNoiseInit      (tNoise *n, float sr, float (*randomNumberGenerator)(), NoiseType type);
-float    tNoiseTick  (tNoise *n);
+int      tNoiseInit     (tNoise *n, NoiseType type);
+float    tNoiseTick     (tNoise *n);
+void     tNoiseSampleRateChanged (tNoise *c);
 
 #pragma Filters
 
@@ -55,9 +67,10 @@ void     tOnePoleSetPole        (tOnePole *f, float thePole);
 void     tOnePoleSetCoefficients(tOnePole *f, float b0, float a1);
 void     tOnePoleSetGain        (tOnePole *f, float gain);
 float    tOnePoleTick           (tOnePole *f, float input);
+void     tOnePoleSampleRateChanged (tOnePole *c);
 
 /* TwoPole filter */
-int      tTwoPoleInit           (tTwoPole *f, float sr);
+int      tTwoPoleInit           (tTwoPole *f);
 void     tTwoPoleSetB0          (tTwoPole *f, float b0);
 void     tTwoPoleSetA1          (tTwoPole *f, float a1);
 void     tTwoPoleSetA2          (tTwoPole *f, float a2);
@@ -65,9 +78,10 @@ void     tTwoPoleSetResonance   (tTwoPole *f, float freq, float radius, int norm
 void     tTwoPoleSetCoefficients(tTwoPole *f, float b0, float a1, float a2);
 void     tTwoPoleSetGain        (tTwoPole *f, float gain);
 float    tTwoPoleTick           (tTwoPole *f, float input);
+void     tTwoPoleSampleRateChanged (tTwoPole *c);
 
 /* OneZero filter */
-int      tOneZeroInit(tOneZero *f, float theZero, float sr);
+int      tOneZeroInit(tOneZero *f, float theZero);
 void     tOneZeroSetB0(tOneZero *f, float b0);
 void     tOneZeroSetB1(tOneZero *f, float b1);
 void     tOneZeroSetZero(tOneZero *f, float theZero);
@@ -76,9 +90,10 @@ void     tOneZeroSetGain(tOneZero *f, float gain);
 float    tOneZeroTick(tOneZero *f, float input);
 
 float    tOneZeroGetPhaseDelay(tOneZero *f, float frequency ); // CAN / SHOULD MAKE GENERIC VERSION OF THIS FUNCTION FOR ALL FILTERS. ALL FILTERS SHOULD HAVE FIXED SIZE ARRAY OF As and Bs. Pass these arays to function. As/Bs not used are -1 in arrays.
+void     tOneZeroSampleRateChanged (tOneZero *c);
 
 /* TwoZero filter */
-int      tTwoZeroInit           (tTwoZero *f, float sampleRate);
+int      tTwoZeroInit           (tTwoZero *f);
 void     tTwoZeroSetB0          (tTwoZero *f, float b0);
 void     tTwoZeroSetB1          (tTwoZero *f, float b1);
 void     tTwoZeroSetB2          (tTwoZero *f, float b2);
@@ -86,20 +101,22 @@ void     tTwoZeroSetNotch       (tTwoZero *f, float frequency, float radius);
 void     tTwoZeroSetCoefficients(tTwoZero *f, float b0, float b1, float b2);
 void     tTwoZeroSetGain        (tTwoZero *f, float gain);
 float    tTwoZeroTick           (tTwoZero *f, float input);
+void     tTwoZeroSampleRateChanged (tTwoZero *c);
 
 /* PoleZero filter */
-int      tPoleZeroInit(tPoleZero *pzf);
-void     tPoleZeroSetB0(tPoleZero *pzf, float b0);
-void     tPoleZeroSetB1(tPoleZero *pzf, float b1);
-void     tPoleZeroSetA1(tPoleZero *pzf, float a1);
-void     tPoleZeroSetCoefficients(tPoleZero *pzf, float b0, float b1, float a1);
-void     tPoleZeroSetAllpass(tPoleZero *pzf, float coeff);
-void     tPoleZeroSetBlockZero(tPoleZero *pzf, float thePole);
-void     tPoleZeroSetGain(tPoleZero *pzf, float gain);
-float    tPoleZeroTick(tPoleZero *pzf, float input);
+int      tPoleZeroInit              (tPoleZero *pzf);
+void     tPoleZeroSetB0             (tPoleZero *pzf, float b0);
+void     tPoleZeroSetB1             (tPoleZero *pzf, float b1);
+void     tPoleZeroSetA1             (tPoleZero *pzf, float a1);
+void     tPoleZeroSetCoefficients   (tPoleZero *pzf, float b0, float b1, float a1);
+void     tPoleZeroSetAllpass        (tPoleZero *pzf, float coeff);
+void     tPoleZeroSetBlockZero      (tPoleZero *pzf, float thePole);
+void     tPoleZeroSetGain           (tPoleZero *pzf, float gain);
+float    tPoleZeroTick              (tPoleZero *pzf, float input);
+void     tPoleZeroSampleRateChanged (tPoleZero *c);
 
 /* BiQuad filter */
-int      tBiQuadInit           (tBiQuad *f, float sr);
+int      tBiQuadInit           (tBiQuad *f);
 void     tBiQuadSetB0          (tBiQuad *f, float b0);
 void     tBiQuadSetA1          (tBiQuad *f, float a1);
 void     tBiQuadSetA2          (tBiQuad *f, float a2);
@@ -108,23 +125,27 @@ void     tBiQuadSetResonance   (tBiQuad *f, float freq, float radius, int normal
 void     tBiQuadSetCoefficients(tBiQuad *f, float b0, float a1, float a2);
 void     tBiQuadSetGain        (tBiQuad *f, float gain);
 float    tBiQuadTick           (tBiQuad *f, float input);
+void     tBiQuadSampleRateChanged (tBiQuad *c);
 
 /* State Variable Filter, adapted from ???. */
-int      tSVFInit(tSVF *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q);
+int      tSVFInit(tSVF *svf, SVFType type, uint16_t cutoffKnob, float Q);
 float    tSVFTick(tSVF *svf, float v0);
 int      tSVFSetFreq(tSVF *svf, uint16_t cutoffKnob);
 int      tSVFSetQ(tSVF *svf, float Q);
+void     tSVFSampleRateChanged (tSVF *c);
 
 /* Efficient State Variable Filter for 14-bit control input, [0, 4096). */
-int      tSVFEfficientInit    (tSVFEfficient *svf, float sr, SVFType type, uint16_t cutoffKnob, float Q);
-float    tSVFEfficientTick    (tSVF *svf, float v0);
-int      tSVFEfficientSetFreq (tSVF *svf, uint16_t cutoffKnob);
-int      tSVFEfficientSetQ    (tSVF *svf, float Q);
+int      tSVFEfficientInit    (tSVFEfficient *svf, SVFType type, uint16_t cutoffKnob, float Q);
+float    tSVFEfficientTick    (tSVFEfficient *svf, float v0);
+int      tSVFEfficientSetFreq (tSVFEfficient *svf, uint16_t cutoffKnob);
+int      tSVFEfficientSetQ    (tSVFEfficient *svf, float Q);
+void     tSVFEfficientSampleRateChanged (tSVFEfficient *c);
 
 /* Simple Highpass filter */
-int      tHighpassInit   (tHighpass *hp, float sr, float freq);
+int      tHighpassInit   (tHighpass *hp, float freq);
 int      tHighpassFreq   (tHighpass *hp, float freq);
 float    tHighpassTick   (tHighpass *hp, float x);
+void     tHighpassSampleRateChanged (tHighpass *c);
 
 #pragma Time-based Utilities
 /* Non-interpolating delay */
@@ -138,6 +159,7 @@ float       tDelayTick      (tDelay *d, float sample);
 
 float       tDelayGetLastOut(tDelay *d);
 float       tDelayGetLastIn (tDelay *d);
+void     tDelaySampleRateChanged (tDelay *c);
 
 /* Linearly-interpolating delay*/
 int         tDelayLInit      (tDelayL *d, float delay, uint32_t maxDelay, float *buff);
@@ -150,6 +172,7 @@ float       tDelayLTick      (tDelayL *d, float sample);
 
 float       tDelayLGetLastOut(tDelayL *d);
 float       tDelayLGetLastIn (tDelayL *d);
+void     tDelayLSampleRateChanged (tDelayL *c);
 
 /* Allpass-interpolating delay*/
 int         tDelayAInit      (tDelayA *d, float delay, uint32_t maxDelay, float *buff);
@@ -162,25 +185,28 @@ float       tDelayATick      (tDelayA *d, float sample);
 
 float       tDelayAGetLastOut(tDelayA *d);
 float       tDelayAGetLastIn (tDelayA *d);
+void     tDelayASampleRateChanged (tDelayA *c);
 
 
 /* Attack-Decay envelope */
-int      tEnvelopeInit(tEnvelope *env, float sr, float attack, float decay, int loop,
+int      tEnvelopeInit(tEnvelope *env, float attack, float decay, int loop,
                               const float *exponentialTable, const float *attackDecayIncTable);
 int      tEnvelopeAttack(tEnvelope *env, float attack);
 int      tEnvelopeDecay(tEnvelope *env, float decay);
 int      tEnvelopeLoop(tEnvelope *env, int loop);
 int      tEnvelopeOn(tEnvelope *env, float velocity);
 float    tEnvelopeTick(tEnvelope *env);
+void     tEnvelopeSampleRateChanged (tEnvelope *c);
 
 /* Attack-Decay-Sustain-Release envelope. */
 int tADSRInit(tADSR *d, float attack, float decay, float sustain, float release);
 
 /* Ramp */
-int      tRampInit   (tRamp *r, float sr, float time, int samples_per_tick);
+int      tRampInit   (tRamp *r, float time, int samples_per_tick);
 int      tRampSetTime(tRamp *r, float time);
 int      tRampSetDest(tRamp *r, float dest);
 float    tRampTick   (tRamp *r);
+void     tRampSampleRateChanged (tRamp *c);
 
 #pragma Complex/Miscellaneous
 /* Envelope Follower */
@@ -188,23 +214,26 @@ int      tEnvelopeFollowerInit           (tEnvelopeFollower *ef, float attackThr
 int      tEnvelopeFollowerDecayCoeff     (tEnvelopeFollower *ef, float decayCoeff);
 int      tEnvelopeFollowerAttackThresh   (tEnvelopeFollower *ef, float attackThresh);
 float    tEnvelopeFollowerTick           (tEnvelopeFollower *ef, float x);
+void     tEnvelopeFollowerSampleRateChanged (tEnvelopeFollower *c);
 
 /* PRCRev: Reverb, adapted from STK, algorithm by Perry Cook. */
-int     tPRCRevInit      (tPRCRev *r, float sr, float t60, float delayBuffers[3][REV_DELAY_LENGTH]);
+int     tPRCRevInit      (tPRCRev *r, float t60, float delayBuffers[3][REV_DELAY_LENGTH]);
 void    tPRCRevSetT60    (tPRCRev *r, float t60);
 void    tPRCRevSetMix    (tPRCRev *r, float mix);
 float   tPRCRevTick      (tPRCRev *r, float input);
+void     tPRCRevSampleRateChanged (tPRCRev *c);
 
 /* NRev: Reverb, adpated from STK. */
-int      tNRevInit   (tNRev *r, float sr, float t60, float delayBuffers[14][REV_DELAY_LENGTH]);
+int      tNRevInit   (tNRev *r, float t60, float delayBuffers[14][REV_DELAY_LENGTH]);
 void     tNRevSetT60 (tNRev *r, float t60);
 void     tNRevSetMix (tNRev *r, float mix);
 float    tNRevTick   (tNRev *r, float input);
+void     tNRevSampleRateChanged (tNRev *c);
 
 #pragma Physical Models
 
 /* tPluck */
-int     tPluckInit          (tPluck *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[REV_DELAY_LENGTH]);
+int     tPluckInit          (tPluck *p, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[REV_DELAY_LENGTH]);
 float   tPluckTick          (tPluck *p);
 void    tPluckPluck         (tPluck *p, float amplitude);
 void    tPluckNoteOn        (tPluck *p, float frequency, float amplitude ); // Start a note with the given frequency and amplitude.;
@@ -212,6 +241,7 @@ void    tPluckNoteOff       (tPluck *p, float amplitude ); // Stop a note with t
 void    tPluckSetFrequency  (tPluck *p, float frequency ); // Set instrument parameters for a particular frequency.
 void    tPluckControlChange (tPluck *p, int number, float value); // Perform the control change specified by \e number and \e value (0.0 - 128.0).
 float   tPluckGetLastOut    (tPluck *p);
+void     tPluckSampleRateChanged (tPluck *c);
 
 /* tStifKarp */
 typedef enum SKControlType
@@ -222,7 +252,7 @@ typedef enum SKControlType
     SKControlTypeNil
 } SKControlType;
 
-int     tStifKarpInit               (tStifKarp *p, float sr, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[2][REV_DELAY_LENGTH]);
+int     tStifKarpInit               (tStifKarp *p, float lowestFrequency, float (*randomNumberGenerator)(), float delayBuff[2][REV_DELAY_LENGTH]);
 float   tStifKarpTick               (tStifKarp *p);
 void    tStifKarpPluck              (tStifKarp *p, float amplitude);
 void    tStifKarpNoteOn             (tStifKarp *p, float frequency, float amplitude ); // Start a note with the given frequency and amplitude.;
@@ -233,6 +263,34 @@ void    tStifKarpSetStretch         (tStifKarp *p, float stretch );//! Set the s
 void    tStifKarpSetPickupPosition  (tStifKarp *p, float position ); //! Set the pluck or "excitation" position along the string (0.0 - 1.0).
 void    tStifKarpSetBaseLoopGain    (tStifKarp *p, float aGain ); //! Set the base loop gain.
 float   tStifKarpGetLastOut         (tStifKarp *p);
+void    tStifKarpSampleRateChanged (tStifKarp *c);
+
+int OOPC_tPhasorRegister(tPhasor *o);
+int OOPC_tCycleRegister(tCycle *o);
+int OOPC_tSawtoothRegister(tSawtooth *o);
+int OOPC_tTriangleRegister(tTriangle *o);
+int OOPC_tSquareRegister(tSquare *o);
+int OOPC_tNoiseRegister(tNoise *o);
+int OOPC_tOnePoleRegister(tOnePole *o);
+int OOPC_tPhasorRegister(tTwoPole *o);
+int OOPC_tOneZeroRegister(tOneZero *o);
+int OOPC_tTwoZeroRegister(tTwoZero *o);
+int OOPC_tPoleZeroRegister(tPoleZero *o);
+int OOPC_tBiQuadRegister(tBiQuad *o);
+int OOPC_tSVFRegister(tSVF *o);
+int OOPC_tSVFEfficientRegister(tSVFEfficient *o);
+int OOPC_tHighpassRegister(tHighpass *o);
+int OOPC_tDelayRegister(tDelay *o);
+int OOPC_tDelayLRegister(tDelayL *o);
+int OOPC_tDelayARegister(tDelayA *o);
+int OOPC_tEnvelopeRegister(tEnvelope *o);
+int OOPC_tADSRRegister(tADSR *o);
+int OOPC_tRampRegister(tRamp *o);
+int OOPC_tEnvelopeFollowerRegister(tEnvelopeFollower *o);
+int OOPC_tPRCRevRegister(tPRCRev *o);
+int OOPC_tNRevRegister(tNRev *o);
+int OOPC_tPluckRegister(tPluck *o);
+int OOPC_tStifKarpRegister(tStifKarp *o);
 
 
 #endif  // CAUDIOLIBRARY_H_INCLUDED
