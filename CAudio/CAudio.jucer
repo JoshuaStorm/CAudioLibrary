@@ -11,15 +11,15 @@
           <FILE id="H2wBwd" name="Yin.cpp" compile="1" resource="0" file="Source/Yin.cpp"/>
         </GROUP>
         <GROUP id="{5645723F-B7E1-3CA2-369A-7D126329A206}" name="Library">
-          <FILE id="oSZLYq" name="OOPC.h" compile="0" resource="0" file="Source/OOPC.h"/>
-          <FILE id="ICKF1E" name="OOPCAPI.h" compile="0" resource="0" file="Source/OOPCAPI.h"/>
-          <FILE id="mZzdFs" name="OOPCAPI.cpp" compile="1" resource="0" file="Source/OOPCAPI.cpp"/>
+          <FILE id="egQEnZ" name="CAudio.h" compile="0" resource="0" file="Source/CAudio.h"/>
+          <FILE id="rTHh6H" name="CAudioAPI.cpp" compile="1" resource="0" file="Source/CAudioAPI.cpp"/>
+          <FILE id="Fh0t5L" name="CAudioAPI.h" compile="0" resource="0" file="Source/CAudioAPI.h"/>
           <FILE id="BieEDy" name="Wavetables.c" compile="1" resource="0" file="Source/Wavetables.c"/>
           <FILE id="ZwF6st" name="Wavetables.h" compile="0" resource="0" file="Source/Wavetables.h"/>
         </GROUP>
         <GROUP id="{74B8D251-850E-42A7-CAE2-BF602CAB0D63}" name="Test">
-          <FILE id="s89kih" name="CAudioLink.h" compile="0" resource="0" file="Source/CAudioLink.h"/>
-          <FILE id="VHxLL1" name="CAudioTest1.h" compile="0" resource="0" file="Source/CAudioTest1.h"/>
+          <FILE id="dXGwKQ" name="CAudioLink.h" compile="0" resource="0" file="Source/CAudioLink.h"/>
+          <FILE id="t17yyO" name="CAudioTest1.h" compile="0" resource="0" file="Source/CAudioTest1.h"/>
         </GROUP>
       </GROUP>
       <GROUP id="{DB3BB674-1FA2-80C0-87AD-DD8B93DB2162}" name="UI">

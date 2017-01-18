@@ -15,7 +15,9 @@
 */
 
     //==============================================================================
-MainContentComponent::MainContentComponent():
+MainContentComponent::MainContentComponent()
+#if DEVICE_SELECT
+:
 settings(*this,
           0,
           2,
@@ -25,11 +27,15 @@ settings(*this,
           false,
           true,
           false)
+#endif
 {
     setSize (1100, 800);
     
     addAndMakeVisible(ui);
+
+#if DEVICE_SELECT
     addAndMakeVisible(settings);
+#endif
     
     setAudioChannels (2, 2);
 }
@@ -128,9 +134,11 @@ void MainContentComponent::paint (Graphics& g)
 void MainContentComponent::resized() 
 {
     ui.setBounds(getLocalBounds());
-    
+
+#if DEVICE_SELECT
     settings.setTopLeftPosition(300, 300);
     settings.setSize(500,800);
+#endif
 }
 
 void MainContentComponent::sliderValueChanged(Slider* slider)

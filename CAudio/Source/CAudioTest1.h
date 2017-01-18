@@ -13,7 +13,7 @@
 
 #include "CAudioLink.h"
 
-#include "OOPCAPI.h"
+#include "CAudioAPI.h"
 
 #include "Wavetables.h"
 

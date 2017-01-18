@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="ArQetv" name="OOPS" projectType="audioplug" version="1.0.0"
+              bundleIdentifier="com.mrmulshine.OOPS" includeBinaryInAppConfig="1"
+              buildVST="1" buildVST3="0" buildAU="1" buildAUv3="0" buildRTAS="0"
+              buildAAX="0" pluginName="OOPS" pluginDesc="OOPS" pluginManufacturer="mrmulshine"
+              pluginManufacturerCode="Manu" pluginCode="Arqe" pluginChannelConfigs="{1,1},{2,2}"
+              pluginIsSynth="0" pluginWantsMidiIn="1" pluginProducesMidiOut="0"
+              pluginIsMidiEffectPlugin="0" pluginEditorRequiresKeys="0" pluginAUExportPrefix="OOPSAU"
+              pluginRTASCategory="" aaxIdentifier="com.mrmulshine.OOPS" pluginAAXCategory="AAX_ePlugInCategory_Dynamics"
+              jucerVersion="4.3.0" companyName="mrmulshine" companyEmail="mrmulshine@gmail.com">
+  <MAINGROUP id="F7Bywq" name="OOPS">
+    <GROUP id="{14C5E2CD-5D51-3FD3-5677-28BECA29E95E}" name="Source">
+      <GROUP id="{FFA9F0EC-F45A-74FC-5A10-9B3CAA731E7C}" name="External">
+        <FILE id="ixwZea" name="Yin.h" compile="0" resource="0" file="Source/Yin.h"/>
+        <FILE id="wbnjmF" name="Yin.cpp" compile="1" resource="0" file="Source/Yin.cpp"/>
+      </GROUP>
+      <GROUP id="{29B401B7-8D07-AAD7-B6B0-EF7916164E1B}" name="OOPS">
+        <GROUP id="{48CA99DD-BBF0-9290-1FEE-800F4FE4D04E}" name="Wavetables">
+          <FILE id="onsACN" name="Wavetables.h" compile="0" resource="0" file="Source/Wavetables.h"/>
+          <FILE id="wrCxsL" name="Wavetables.c" compile="1" resource="0" file="Source/Wavetables.c"/>
+        </GROUP>
+        <FILE id="yccgcY" name="OOPSBase.h" compile="0" resource="0" file="Source/OOPSBase.h"/>
+        <FILE id="dUBfoI" name="OOPS.h" compile="0" resource="0" file="Source/OOPS.h"/>
+        <FILE id="yYSH4g" name="OOPS.cpp" compile="1" resource="0" file="Source/OOPS.cpp"/>
+      </GROUP>
+      <GROUP id="{5EAA8994-9CCF-AFE1-27F3-6B2132200B97}" name="Test">
+        <FILE id="XkflAI" name="OOPSLink.h" compile="0" resource="0" file="Source/OOPSLink.h"/>
+        <FILE id="O9woHe" name="OOPSLink.cpp" compile="1" resource="0" file="Source/OOPSLink.cpp"/>
+        <FILE id="xGEfAX" name="OOPSTest.h" compile="0" resource="0" file="Source/OOPSTest.h"/>
+        <FILE id="QXWg3b" name="MyTest.h" compile="0" resource="0" file="Source/MyTest.h"/>
+        <FILE id="S5AtSl" name="MyTest.cpp" compile="1" resource="0" file="Source/MyTest.cpp"/>
+      </GROUP>
+      <GROUP id="{A89F40A7-55BD-BADE-F6FC-0813ECB90B8B}" name="Wrapper">
+        <FILE id="R9R9N2" name="Globals.h" compile="0" resource="0" file="Source/Globals.h"/>
+        <FILE id="oQ7Hdj" name="UIComponent.h" compile="0" resource="0" file="Source/UIComponent.h"/>
+        <FILE id="ONd1SP" name="UIComponent.cpp" compile="1" resource="0" file="Source/UIComponent.cpp"/>
+        <FILE id="EnmsIi" name="PluginProcessor.h" compile="0" resource="0"
+              file="Source/PluginProcessor.h"/>
+        <FILE id="xwxe1U" name="PluginProcessor.cpp" compile="1" resource="0"
+              file="Source/PluginProcessor.cpp"/>
+        <FILE id="L2MQTe" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+        <FILE id="euDngN" name="PluginEditor.cpp" compile="1" resource="0"
+              file="Source/PluginEditor.cpp"/>
+      </GROUP>
+    </GROUP>
+  </MAINGROUP>
+  <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="OOPS"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="OOPS"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_video" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../../../JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
+    <XCODE_IPHONE targetFolder="Builds/iOS" iosScreenOrientation="portraitlandscape">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="OOPS"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="OOPS"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_video" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../../../JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_IPHONE>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_cryptography" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_opengl" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_video" showAllCode="1" useLocalCopy="0"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_QUICKTIME="disabled"/>
+</JUCERPROJECT>
